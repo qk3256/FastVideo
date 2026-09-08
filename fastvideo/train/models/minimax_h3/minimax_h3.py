@@ -115,6 +115,7 @@ class MiniMaxH3Model(ModelBase):
         disable_custom_init_weights: bool,
         enable_gradient_checkpointing_type: str | None,
         transformer_override_safetensor: str | None,
+        num_transformer_layers: int | None = None,
     ) -> torch.nn.Module:
         """Load H3 through the training FSDP loader and apply block checkpointing."""
         transformer = load_module_from_path(
@@ -124,6 +125,7 @@ class MiniMaxH3Model(ModelBase):
             disable_custom_init_weights=disable_custom_init_weights,
             override_transformer_cls_name=self._transformer_cls_name,
             transformer_override_safetensor=transformer_override_safetensor,
+            num_transformer_layers=num_transformer_layers,
             attention_backend=self.attention_backend,
         )
         checkpointing_type = (enable_gradient_checkpointing_type

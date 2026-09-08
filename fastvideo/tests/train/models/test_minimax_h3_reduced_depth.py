@@ -122,3 +122,54 @@ training:
     assert refiner["full_model_reference_count"] == "2"
     assert final["logical_count_per_step"] == "1"
     assert final["full_model_reference_count"] == "1"
+
+
+def _wrapper_training_config():
+    """Minimal hermetic stand-in for the TrainingConfig fields the wrapper reads."""
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        data=SimpleNamespace(
+            train_batch_size=1,
+            training_cfg_rate=0.0,
+            preprocessed_data_type="t2va",
+        ),
+        model=SimpleNamespace(enable_gradient_checkpointing_type=None),
+        pipeline_config=SimpleNamespace(
+            dit_config=SimpleNamespace(uniform_parameter_dtype=False),
+            text_encoder_configs=[SimpleNamespace()],
+        ),
+    )
+
+
+def test_constructor_forwards_num_transformer_layers_to_loader(monkeypatch: pytest.MonkeyPatch):
+    """The YAML/constructor depth must reach ``load_module_from_path`` unchanged."""
+    from fastvideo.train.models.minimax_h3.minimax_h3 import MiniMaxH3Model
+
+    captured: dict = {}
+
+    def fake_load_module_from_path(**kwargs):
+        captured.update(kwargs)
+        return torch.nn.Linear(2, 2)
+
+    monkeypatch.setattr(
+        "fastvideo.train.models.minimax_h3.minimax_h3.load_module_from_path",
+        fake_load_module_from_path,
+    )
+    model = MiniMaxH3Model(
+        init_from="unused",
+        training_config=_wrapper_training_config(),
+        trainable=False,
+        num_transformer_layers=4,
+    )
+    assert captured["num_transformer_layers"] == 4
+    assert captured["module_type"] == "transformer"
+    assert isinstance(model.transformer, torch.nn.Linear)
+
+    # Unset depth must forward as None so the loader keeps full checkpoint depth.
+    MiniMaxH3Model(
+        init_from="unused",
+        training_config=_wrapper_training_config(),
+        trainable=False,
+    )
+    assert captured["num_transformer_layers"] is None
