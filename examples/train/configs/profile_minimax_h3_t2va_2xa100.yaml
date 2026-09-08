@@ -61,5 +61,9 @@ training:
 
   dit_precision: bf16
 
-callbacks: {}
+callbacks:
+  stage2_evidence:
+    _target_: fastvideo.train.callbacks.stage2_evidence.Stage2EvidenceCallback
+    # Overridden per run via --callbacks.stage2_evidence.output_dir.
+    output_dir: artifacts/minimax_h3_stage2/unset
 pipeline: {}
