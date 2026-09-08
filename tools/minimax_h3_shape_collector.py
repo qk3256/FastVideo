@@ -103,6 +103,7 @@ class Workload:
     gemm_k: int
     dtype: str
     logical_count_per_step: int
+    full_model_reference_count: int
     flops_per_call: int
     weighted_flops_per_step: int
     m_mod_16: int
@@ -255,6 +256,7 @@ def add_linear_triplet(
     out_features: int,
     dtype: str,
     count: int,
+    full_model_reference_count: int | None = None,
     source: str,
     notes: str = "",
 ) -> None:
@@ -279,6 +281,9 @@ def add_linear_triplet(
         output_features=out_features,
         dtype=dtype,
         logical_count_per_step=count,
+        full_model_reference_count=(
+            50 if scope == "main_transformer" else count
+            if full_model_reference_count is None else full_model_reference_count),
         static_input_stride=f"({in_features}, 1) [assumed contiguous for microbench only]",
         static_weight_stride=f"({in_features}, 1) for stored W[{out_features},{in_features}]",
         runtime_stride_required=True,
@@ -598,8 +603,6 @@ def main() -> None:
         dtype=dtype,
         include_refiner=args.include_refiner,
         adaln_unique_timesteps=args.adaln_unique_timesteps,
-        checkpoint_num_layers=checkpoint_num_layers,
-        active_num_layers=active_num_layers,
     )
 
     write_csv(args.output, workloads)
@@ -615,6 +618,8 @@ def main() -> None:
         checkpointing=checkpointing,
         text_source=text_source,
         adaln_unique_timesteps=args.adaln_unique_timesteps,
+        checkpoint_num_layers=checkpoint_num_layers,
+        active_num_layers=active_num_layers,
     )
 
     print("=== MiniMax H3 static GEMM workload ===")

@@ -75,6 +75,18 @@ def resolve_minimax_h3_num_layers(requested: int | None, checkpoint_layers: int)
     return requested
 
 
+def resolve_minimax_h3_loader_depth(cls_name: str, requested: int | None, dit_config):
+    """Apply reduced depth only to an explicitly requested MiniMax H3 load."""
+    if cls_name != "MiniMaxH3Transformer3DModel" or requested is None:
+        return None
+    if not hasattr(dit_config.arch_config, "num_layers"):
+        raise ValueError("MiniMax H3 config is missing arch_config.num_layers")
+    checkpoint_layers = int(dit_config.arch_config.num_layers)
+    active_layers = resolve_minimax_h3_num_layers(requested, checkpoint_layers)
+    dit_config.arch_config.num_layers = active_layers
+    return checkpoint_layers, active_layers, _minimax_h3_depth_key_filter(active_layers)
+
+
 class ComponentLoader(ABC):
     """Base class for loading a specific type of model component."""
 
@@ -1071,13 +1083,14 @@ class TransformerLoader(ComponentLoader):
         # Config from Diffusers supersedes fastvideo's model config
         dit_config = deepcopy(fastvideo_args.pipeline_config.dit_config)
         dit_config.update_model_arch(config)
-        active_layers = getattr(dit_config, "num_transformer_layers", None)
-        checkpoint_layers = int(dit_config.arch_config.num_layers)
         checkpoint_key_filter = None
-        if active_layers is not None:
-            active_layers = resolve_minimax_h3_num_layers(active_layers, checkpoint_layers)
-            dit_config.arch_config.num_layers = active_layers
-            checkpoint_key_filter = _minimax_h3_depth_key_filter(active_layers)
+        depth = resolve_minimax_h3_loader_depth(
+            cls_name,
+            getattr(fastvideo_args, "num_transformer_layers", None),
+            dit_config,
+        )
+        if depth is not None:
+            checkpoint_layers, active_layers, checkpoint_key_filter = depth
             logger.info("MiniMax H3 layers: checkpoint_num_transformer_layers=%d, active_num_transformer_layers=%d",
                         checkpoint_layers, active_layers)
 

@@ -1,4 +1,6 @@
 import json
+import csv
+import sys
 from pathlib import Path
 
 import pytest
@@ -7,6 +9,7 @@ from safetensors.torch import save_file
 
 from fastvideo.models.loader.component_loader import (
     _minimax_h3_depth_key_filter,
+    resolve_minimax_h3_loader_depth,
     resolve_minimax_h3_num_layers,
 )
 from fastvideo.models.loader.weight_utils import safetensors_weights_iterator
@@ -19,6 +22,16 @@ def test_none_keeps_checkpoint_depth():
 def test_hf_merged_config_override_resolves_four_layers():
     # The loader calls this after update_model_arch() has restored 50.
     assert resolve_minimax_h3_num_layers(4, 50) == 4
+
+
+def test_non_h3_loader_does_not_access_num_layers():
+    class Arch:
+        pass
+
+    class Config:
+        arch_config = Arch()
+
+    assert resolve_minimax_h3_loader_depth("OtherTransformer", 4, Config()) is None
 
 
 def test_filter_keeps_first_four_refiner_and_outputs():
@@ -82,7 +95,7 @@ models:
   student:
     num_transformer_layers: 4
 training:
-  data: {num_latent_t: 1, num_frames: 1, num_height: 16, num_width: 16}
+  data: {num_latent_t: 1, num_frames: 1, num_height: 32, num_width: 32}
   distributed: {sp_size: 2}
   dit_precision: bf16
 """)
@@ -91,12 +104,21 @@ training:
     out = tmp_path / "out.csv"
     meta = tmp_path / "out.json"
     subprocess.run([
-        "python", "tools/minimax_h3_shape_collector.py", "--config", str(config),
+        sys.executable, "tools/minimax_h3_shape_collector.py", "--config", str(config),
         "--text-tokens", "2", "--output", str(out), "--metadata-output", str(meta),
     ], check=True)
     payload = json.loads(meta.read_text())
     assert payload["active_num_layers"] == 4
     assert payload["checkpoint_num_layers"] == 50
     assert payload["full_model_reference_count"] == 50
-    rows = out.read_text().splitlines()
-    assert any(",4," in row for row in rows[1:])
+    with out.open(newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    main = next(row for row in rows if row["scope"] == "main_transformer" and row["module"] == "Q")
+    refiner = next(row for row in rows if row["scope"] == "text_refiner" and row["module"] == "Refiner-Q")
+    final = next(row for row in rows if row["scope"] == "final" and row["module"] == "AdaLN-out")
+    assert main["logical_count_per_step"] == "4"
+    assert main["full_model_reference_count"] == "50"
+    assert refiner["logical_count_per_step"] == "2"
+    assert refiner["full_model_reference_count"] == "2"
+    assert final["logical_count_per_step"] == "1"
+    assert final["full_model_reference_count"] == "1"

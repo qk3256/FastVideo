@@ -91,6 +91,7 @@ def load_module_from_path(
     disable_custom_init_weights: bool = False,
     override_transformer_cls_name: str | None = None,
     transformer_override_safetensor: str | None = None,
+    num_transformer_layers: int | None = None,
     attention_backend: AttentionBackendEnum | str | None = None,
 ) -> torch.nn.Module:
     """Load one pipeline component with its role-scoped attention policy.
@@ -129,6 +130,8 @@ def load_module_from_path(
 
     if transformer_override_safetensor:
         fastvideo_args.init_weights_from_safetensors = str(transformer_override_safetensor)
+    if num_transformer_layers is not None:
+        fastvideo_args.num_transformer_layers = num_transformer_layers
 
     if attention_backend is not None and module_type != "transformer":
         raise ValueError("attention_backend can only be set when loading "

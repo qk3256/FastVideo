@@ -94,15 +94,12 @@ class MiniMaxH3Model(ModelBase):
 
         self._init_from = str(init_from)
         self.training_config = training_config
-        if num_transformer_layers is not None:
-            if training_config.pipeline_config is None:
-                raise ValueError("MiniMaxH3Model requires a resolved pipeline config")
-            training_config.pipeline_config.dit_config.num_transformer_layers = num_transformer_layers
         self.transformer = self._load_transformer(
             trainable=trainable,
             disable_custom_init_weights=disable_custom_init_weights,
             enable_gradient_checkpointing_type=enable_gradient_checkpointing_type,
             transformer_override_safetensor=transformer_override_safetensor,
+            num_transformer_layers=num_transformer_layers,
         )
         self.noise_scheduler = MiniMaxH3Scheduler(shift=_VIDEO_SCHEDULER_SHIFT)
         self.audio_noise_scheduler = MiniMaxH3Scheduler(shift=_AUDIO_SCHEDULER_SHIFT)

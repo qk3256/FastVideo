@@ -3,7 +3,7 @@
 models:
   student:
     _target_: fastvideo.train.models.minimax_h3.MiniMaxH3Model
-    init_from: /home/why/models/MiniMax-H3
+    init_from: data/models/MiniMax-H3
     trainable: true
     num_transformer_layers: 4
     enable_gradient_checkpointing_type: full
@@ -22,7 +22,7 @@ training:
     pin_cpu_memory: true
 
   data:
-    data_path: /home/why/workspace/project/FastVideo/data/crush-smol_h3_t2va_single_sample_preprocessed
+    data_path: data/crush-smol_h3_t2va_single_sample_preprocessed
     preprocessed_data_type: t2va
     dataloader_num_workers: 0
     train_batch_size: 1
@@ -45,7 +45,7 @@ training:
     gradient_accumulation_steps: 1
 
   checkpoint:
-    output_dir: /tmp/minimax_h3_profile_checkpoints
+    output_dir: runs/minimax_h3_profile/checkpoints
     training_state_checkpointing_steps: 0
     checkpoints_total_limit: 0
     resume_from_checkpoint: ""
