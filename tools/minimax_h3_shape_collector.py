@@ -494,6 +494,8 @@ def write_metadata(
     checkpointing: str,
     text_source: str,
     adaln_unique_timesteps: int,
+    checkpoint_num_layers: int,
+    active_num_layers: int,
 ) -> None:
     metadata = {
         "config": str(config_path),
@@ -502,6 +504,9 @@ def write_metadata(
         "gradient_checkpointing": checkpointing,
         "text_token_source": text_source,
         "adaln_unique_timesteps": adaln_unique_timesteps,
+        "checkpoint_num_layers": checkpoint_num_layers,
+        "active_num_layers": active_num_layers,
+        "full_model_reference_count": checkpoint_num_layers,
         "architecture": asdict(arch),
         "geometry": asdict(geometry),
         "limitations": [
@@ -567,7 +572,13 @@ def main() -> None:
         or "disabled"
     )
 
-    arch = Arch()
+    checkpoint_num_layers = DEFAULT_NUM_LAYERS
+    requested_layers = nested_get(config, "models", "student", "num_transformer_layers")
+    active_num_layers = checkpoint_num_layers if requested_layers is None else int(requested_layers)
+    if not 1 <= active_num_layers <= checkpoint_num_layers:
+        raise ValueError(f"num_transformer_layers must satisfy 1 <= N <= {checkpoint_num_layers}, "
+                         f"got {requested_layers!r}")
+    arch = Arch(num_layers=active_num_layers)
     geometry = build_geometry(
         text_tokens=text_tokens,
         num_latent_t=num_latent_t,
@@ -587,6 +598,8 @@ def main() -> None:
         dtype=dtype,
         include_refiner=args.include_refiner,
         adaln_unique_timesteps=args.adaln_unique_timesteps,
+        checkpoint_num_layers=checkpoint_num_layers,
+        active_num_layers=active_num_layers,
     )
 
     write_csv(args.output, workloads)
@@ -617,6 +630,8 @@ def main() -> None:
     print(f"AdaLN M:             {args.adaln_unique_timesteps}")
     print(f"dtype:               {dtype}")
     print(f"checkpointing:       {checkpointing}")
+    print(f"checkpoint layers:   {checkpoint_num_layers}")
+    print(f"active layers:       {active_num_layers}")
     print(f"CSV:                 {args.output}")
     print(f"metadata:            {metadata_path}")
     print()

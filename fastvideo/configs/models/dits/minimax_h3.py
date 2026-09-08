@@ -85,3 +85,4 @@ class MiniMaxH3Config(DiTConfig):
     # FastVideo's Fully Sharded Data Parallel (FSDP) loading path requires one
     # parameter dtype, while H3 inference keeps boundary projections in FP32.
     uniform_parameter_dtype: bool = False
+    num_transformer_layers: int | None = None

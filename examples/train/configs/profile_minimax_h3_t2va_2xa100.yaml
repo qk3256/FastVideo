@@ -1,0 +1,65 @@
+# MiniMax H3 reduced-depth profiling configuration for two A100 40GB GPUs.
+
+models:
+  student:
+    _target_: fastvideo.train.models.minimax_h3.MiniMaxH3Model
+    init_from: /home/why/models/MiniMax-H3
+    trainable: true
+    num_transformer_layers: 4
+    enable_gradient_checkpointing_type: full
+    attention_backend: TORCH_SDPA
+
+method:
+  _target_: fastvideo.train.methods.fine_tuning.finetune.FineTuneMethod
+
+training:
+  distributed:
+    num_gpus: 2
+    sp_size: 2
+    tp_size: 1
+    hsdp_replicate_dim: 1
+    hsdp_shard_dim: 2
+    pin_cpu_memory: true
+
+  data:
+    data_path: /home/why/workspace/project/FastVideo/data/crush-smol_h3_t2va_single_sample_preprocessed
+    preprocessed_data_type: t2va
+    dataloader_num_workers: 0
+    train_batch_size: 1
+    training_cfg_rate: 0.0
+    seed: 42
+    num_latent_t: 37
+    num_height: 768
+    num_width: 1344
+    num_frames: 124
+
+  optimizer:
+    learning_rate: 5.0e-5
+    betas: [0.9, 0.999]
+    weight_decay: 0.0
+    lr_scheduler: constant
+    lr_warmup_steps: 0
+
+  loop:
+    max_train_steps: 3
+    gradient_accumulation_steps: 1
+
+  checkpoint:
+    output_dir: /tmp/minimax_h3_profile_checkpoints
+    training_state_checkpointing_steps: 0
+    checkpoints_total_limit: 0
+    resume_from_checkpoint: ""
+
+  tracker:
+    trackers: []
+    project_name: fastvideo_minimax_h3
+    run_name: minimax_h3_profile_4layer_2xa100
+
+  model:
+    precondition_outputs: false
+    enable_gradient_checkpointing_type: full
+
+  dit_precision: bf16
+
+callbacks: {}
+pipeline: {}

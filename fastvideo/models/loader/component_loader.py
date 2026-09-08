@@ -4,6 +4,7 @@ import dataclasses
 import glob
 import json
 import os
+import re
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Generator, Iterable
@@ -49,6 +50,29 @@ from fastvideo.utils import PRECISION_TO_TYPE, is_pin_memory_available
 from fastvideo.hooks.layerwise_offload import enable_layerwise_offload
 
 logger = init_logger(__name__)
+
+
+def _minimax_h3_depth_key_filter(active_layers: int):
+    """Keep all keys except discarded main H3 transformer blocks."""
+    pattern = re.compile(r"^transformer_blocks\.(\d+)(?:\.|$)")
+
+    def keep(name: str) -> bool:
+        match = pattern.match(name)
+        return match is None or int(match.group(1)) < active_layers
+
+    return keep
+
+
+def resolve_minimax_h3_num_layers(requested: int | None, checkpoint_layers: int) -> int:
+    """Resolve a post-HF-merge MiniMax H3 depth without changing default behavior."""
+    if requested is None:
+        return checkpoint_layers
+    if isinstance(requested, bool) or not isinstance(requested, int):
+        raise ValueError(f"num_transformer_layers must be an integer or None, got {requested!r}")
+    if not 1 <= requested <= checkpoint_layers:
+        raise ValueError(
+            f"num_transformer_layers must satisfy 1 <= N <= checkpoint layers ({checkpoint_layers}), got {requested}")
+    return requested
 
 
 class ComponentLoader(ABC):
@@ -1047,6 +1071,15 @@ class TransformerLoader(ComponentLoader):
         # Config from Diffusers supersedes fastvideo's model config
         dit_config = deepcopy(fastvideo_args.pipeline_config.dit_config)
         dit_config.update_model_arch(config)
+        active_layers = getattr(dit_config, "num_transformer_layers", None)
+        checkpoint_layers = int(dit_config.arch_config.num_layers)
+        checkpoint_key_filter = None
+        if active_layers is not None:
+            active_layers = resolve_minimax_h3_num_layers(active_layers, checkpoint_layers)
+            dit_config.arch_config.num_layers = active_layers
+            checkpoint_key_filter = _minimax_h3_depth_key_filter(active_layers)
+            logger.info("MiniMax H3 layers: checkpoint_num_transformer_layers=%d, active_num_transformer_layers=%d",
+                        checkpoint_layers, active_layers)
 
         # Generator-only QAT for DMD distillation: the teacher (real_score) and
         # critic (fake_score) transformers load with this flag set and must stay
@@ -1142,6 +1175,7 @@ class TransformerLoader(ComponentLoader):
                 torch_compile_kwargs=fastvideo_args.torch_compile_kwargs,
                 inference_regional_compile=fastvideo_args.inference_torch_compile,
                 inference_vsa_tile_size=fastvideo_args.VSA_tile_size,
+                checkpoint_key_filter=checkpoint_key_filter,
                 # Only the whole-parameter half of the adapter is applied here, while
                 # tensors are still unsharded; LoRAPipeline merges the low-rank half
                 # once the module tree exists.

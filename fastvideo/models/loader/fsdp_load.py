@@ -201,6 +201,7 @@ def maybe_load_fsdp_model(
     inference_vsa_tile_size: int | None = None,
     lora_path: str | None = None,
     lora_strength: float = 1.0,
+    checkpoint_key_filter: Callable[[str], bool] | None = None,
 ) -> torch.nn.Module:
     """
     Load the model with FSDP if is training, else load the model without FSDP.
@@ -278,7 +279,11 @@ def maybe_load_fsdp_model(
     # Host offload is already disabled on unified memory (GB10). Staging the
     # 35B FastH3 DiT on CPU and then copying to CUDA doubled that working set
     # and took minutes. Follow cpu_offload: read onto the accelerator.
-    weight_iterator = safetensors_weights_iterator(weight_dir_list, to_cpu=cpu_offload)
+    weight_iterator = safetensors_weights_iterator(
+        weight_dir_list,
+        to_cpu=cpu_offload,
+        key_filter=checkpoint_key_filter,
+    )
     logger.info("Loading transformer weights with to_cpu=%s", cpu_offload)
     param_names_mapping_fn = get_param_names_mapping(model.param_names_mapping)
     dense_lora_patch = DenseLoRAPatch.from_adapter(

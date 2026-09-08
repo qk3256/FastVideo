@@ -61,6 +61,7 @@ class MiniMaxH3Model(ModelBase):
         disable_custom_init_weights: bool = False,
         enable_gradient_checkpointing_type: str | None = None,
         transformer_override_safetensor: str | None = None,
+        num_transformer_layers: int | None = None,
         attention_backend: AttentionBackendEnum | str | None = AttentionBackendEnum.TORCH_SDPA,
     ) -> None:
         """Validate the single-document T2VA contract and load the transformer."""
@@ -93,6 +94,10 @@ class MiniMaxH3Model(ModelBase):
 
         self._init_from = str(init_from)
         self.training_config = training_config
+        if num_transformer_layers is not None:
+            if training_config.pipeline_config is None:
+                raise ValueError("MiniMaxH3Model requires a resolved pipeline config")
+            training_config.pipeline_config.dit_config.num_transformer_layers = num_transformer_layers
         self.transformer = self._load_transformer(
             trainable=trainable,
             disable_custom_init_weights=disable_custom_init_weights,

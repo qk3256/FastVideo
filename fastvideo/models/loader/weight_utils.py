@@ -6,7 +6,7 @@ import hashlib
 import json
 import os
 import tempfile
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from pathlib import Path
 
 import filelock
@@ -150,7 +150,8 @@ def _get_initialized_node_group():
 def safetensors_weights_iterator(hf_weights_files: list[str],
                                  to_cpu: bool = False,
                                  broadcast: bool = True,
-                                 async_broadcast: bool = False) -> Generator[tuple[str, torch.Tensor], None, None]:
+                                 async_broadcast: bool = False,
+                                 key_filter: Callable[[str], bool] | None = None) -> Generator[tuple[str, torch.Tensor], None, None]:
     """Iterate over the weights in the model safetensor files.
     Args:
         hf_weights_files: List of safetensor files to load.
@@ -168,6 +169,7 @@ def safetensors_weights_iterator(hf_weights_files: list[str],
         async_broadcast = False
 
     handles = []
+    skipped = 0
     for st_file in tqdm(
             hf_weights_files,
             desc="Loading safetensors checkpoint shards",
@@ -176,6 +178,9 @@ def safetensors_weights_iterator(hf_weights_files: list[str],
     ):
         with safe_open(st_file, framework="pt", device=device) as f:
             for name in f.keys():  # noqa: SIM118
+                if key_filter is not None and not key_filter(name):
+                    skipped += 1
+                    continue
                 if to_cpu:
                     param = f.get_tensor(name)
                 elif broadcast and node_group is not None:
@@ -206,6 +211,8 @@ def safetensors_weights_iterator(hf_weights_files: list[str],
             for handle in handles:
                 handle.wait()
             handles.clear()
+    if skipped:
+        logger.info("Skipped %d safetensors keys via checkpoint key filter", skipped)
 
 
 def pt_weights_iterator(hf_weights_files: list[str],
