@@ -23,9 +23,18 @@ if TYPE_CHECKING:
 _DISABLED_TRACKER_TOKENS = {"none", "off", "disabled"}
 
 
-def _coerce_trackers(trackers: list[str]) -> list[str]:
-    """Drop explicit disable tokens; leave real tracker names untouched."""
-    return [t for t in trackers if str(t).lower() not in _DISABLED_TRACKER_TOKENS]
+def _resolve_trackers(requested: list[str], project_name: str) -> list[str]:
+    """Resolve the effective tracker list for a run.
+
+    Opt-out tokens suppress both real trackers and the W&B auto-enable that
+    fires whenever the resolved list would be empty with a project name set.
+    """
+    tokens = [str(t) for t in requested]
+    explicitly_disabled = any(t.lower() in _DISABLED_TRACKER_TOKENS for t in tokens)
+    trackers = [t for t in tokens if t.lower() not in _DISABLED_TRACKER_TOKENS]
+    if not trackers and str(project_name) and not explicitly_disabled:
+        trackers.append(Trackers.WANDB.value)
+    return trackers
 
 
 def build_tracker(
@@ -38,9 +47,7 @@ def build_tracker(
 
     world_group = get_world_group()
 
-    trackers = _coerce_trackers(list(tracker_config.trackers))
-    if not trackers and str(tracker_config.project_name):
-        trackers.append(Trackers.WANDB.value)
+    trackers = _resolve_trackers(list(tracker_config.trackers), str(tracker_config.project_name))
     if world_group.rank != 0:
         trackers = []
 
