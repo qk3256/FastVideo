@@ -9,6 +9,7 @@ import torch
 
 from fastvideo.distributed import get_sp_group
 from fastvideo.forward_context import set_forward_context
+from fastvideo.logger import init_logger
 from fastvideo.models.schedulers.scheduling_minimax_h3 import MiniMaxH3Scheduler
 from fastvideo.pipelines import TrainingBatch
 from fastvideo.pipelines.basic.minimax_h3.packing import (
@@ -39,6 +40,8 @@ _AUDIO_SCHEDULER_SHIFT = 3.0
 _VIDEO_LATENT_CHANNELS = 24
 _AUDIO_LATENT_CHANNELS = 32
 
+logger = init_logger(__name__)
+
 
 def shift_noise_amount(base_noise_amount: torch.Tensor, shift: float) -> torch.Tensor:
     """Apply the MiniMax H3 rational shift to a unit noise amount."""
@@ -63,6 +66,7 @@ class MiniMaxH3Model(ModelBase):
         transformer_override_safetensor: str | None = None,
         num_transformer_layers: int | None = None,
         attention_backend: AttentionBackendEnum | str | None = AttentionBackendEnum.TORCH_SDPA,
+        compile_blocks: bool = False,
     ) -> None:
         """Validate the single-document T2VA contract and load the transformer."""
         super().__init__(
@@ -100,6 +104,7 @@ class MiniMaxH3Model(ModelBase):
             enable_gradient_checkpointing_type=enable_gradient_checkpointing_type,
             transformer_override_safetensor=transformer_override_safetensor,
             num_transformer_layers=num_transformer_layers,
+            compile_blocks=compile_blocks,
         )
         self.noise_scheduler = MiniMaxH3Scheduler(shift=_VIDEO_SCHEDULER_SHIFT)
         self.audio_noise_scheduler = MiniMaxH3Scheduler(shift=_AUDIO_SCHEDULER_SHIFT)
@@ -116,6 +121,7 @@ class MiniMaxH3Model(ModelBase):
         enable_gradient_checkpointing_type: str | None,
         transformer_override_safetensor: str | None,
         num_transformer_layers: int | None = None,
+        compile_blocks: bool = False,
     ) -> torch.nn.Module:
         """Load H3 through the training FSDP loader and apply block checkpointing."""
         transformer = load_module_from_path(
@@ -135,7 +141,39 @@ class MiniMaxH3Model(ModelBase):
                 transformer,
                 checkpointing_type=checkpointing_type,
             )
-        return apply_trainable(transformer, trainable=trainable)
+        transformer = apply_trainable(transformer, trainable=trainable)
+        if compile_blocks:
+            self._compile_transformer_blocks(transformer)
+        return transformer
+
+    @staticmethod
+    def _compile_transformer_blocks(transformer: torch.nn.Module) -> None:
+        """Regionally torch.compile each transformer block (E-recipe, opt-in).
+
+        Runs after load + FSDP shard + activation-checkpoint wrap so the
+        checkpoint wrappers stay outside the compiled regions
+        (_compile_model_regions compiles each block's
+        _checkpoint_wrapped_module forward, keeping FSDP and saved-tensor
+        hooks eager). fullgraph=True turns untraceable code into a hard
+        failure instead of a silent graph break.
+        """
+        from fastvideo.models.loader import fsdp_load
+
+        transformer.prepare_for_compile()
+        attention_count = fsdp_load._enable_regional_attention_compile(transformer)
+        region_count = fsdp_load._compile_model_regions(transformer, {})
+        # Marker for callbacks.coexistence: the torch profiler's per-module
+        # record_function hooks cannot run inside these compiled regions.
+        transformer._regional_compile_enabled = True  # type: ignore[attr-defined]
+        logger.info(
+            "compile_blocks: torch.compile(fullgraph, emulate_precision_casts) armed for "
+            "%d transformer blocks, %d attention modules opted into tracing. Step 1 pays a "
+            "one-time Inductor build; compile_blocks is mutually exclusive with "
+            "callbacks.torch_profiler per-module hooks (TorchProfilerCallback keeps only its "
+            "outer phase ranges when this marker is set).",
+            region_count,
+            attention_count,
+        )
 
     def init_preprocessors(self, training_config: TrainingConfig) -> None:
         """Load precomputed text embeddings and paired video-audio latents."""
