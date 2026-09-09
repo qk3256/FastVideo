@@ -152,15 +152,22 @@ def _flatten_scalars(value: Any) -> Iterable[Any]:
         yield value
 
 
-def text_tokens_from_parquet(path: Path, row: int, column: str) -> int:
+def text_tokens_from_parquet(path: Path, row: int, column: str) -> tuple[int, str]:
     try:
         import pyarrow.parquet as pq
     except ImportError as exc:  # pragma: no cover
         raise SystemExit("pyarrow is required for --parquet: pip install pyarrow") from exc
 
+    if column not in pq.read_schema(path).names:
+        # T2VA single-sample rows store no mask column; the text embedding is
+        # saved unpadded, so its leading dimension is the valid token count.
+        fallback_column = "text_embedding_shape"
+        shape_table = pq.read_table(path, columns=[fallback_column])
+        shape = shape_table[fallback_column][row].as_py()
+        if not shape:
+            raise ValueError(f"{fallback_column!r} in row {row} is empty")
+        return int(shape[0]), fallback_column + "[0]"
     table = pq.read_table(path, columns=[column])
-    if not 0 <= row < table.num_rows:
-        raise IndexError(f"row={row} out of range for {table.num_rows} parquet rows")
     value = table[column][row].as_py()
     flattened = list(_flatten_scalars(value))
     if not flattened:
@@ -168,7 +175,7 @@ def text_tokens_from_parquet(path: Path, row: int, column: str) -> int:
     count = sum(bool(x) for x in flattened)
     if count <= 0:
         raise ValueError(f"{column!r} in row {row} contains no valid text tokens")
-    return int(count)
+    return int(count), column
 
 
 def resolve_git_revision(start: Path) -> str:
@@ -559,8 +566,9 @@ def main() -> None:
     config = load_yaml(args.config)
 
     if args.parquet is not None:
-        text_tokens = text_tokens_from_parquet(args.parquet, args.parquet_row, args.mask_column)
-        text_source = f"{args.parquet}:{args.mask_column}[row={args.parquet_row}]"
+        text_tokens, column_used = text_tokens_from_parquet(
+            args.parquet, args.parquet_row, args.mask_column)
+        text_source = f"{args.parquet}:{column_used}[row={args.parquet_row}]"
     else:
         text_tokens = int(args.text_tokens)
         text_source = "--text-tokens"
