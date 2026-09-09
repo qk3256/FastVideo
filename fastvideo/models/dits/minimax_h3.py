@@ -545,12 +545,15 @@ class MiniMaxH3TransformerBlock(nn.Module):
         with nvtx_range("minimax_h3.transformer_block.adaln_projection"):
             if self.fuse_adaln_gather:
                 # One row-gather over the joint modulation output instead of
-                # six per table; value-identical (see unit test).
+                # six per-table gathers; values are already row-expanded to
+                # the sequence axis, so use-site gathers become no-ops.
                 shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = _fused_adaln_gather(
                     self.adaln_proj, temb, adaln_indices, hidden_states.dtype)
+                gather = lambda t: t  # noqa: E731
             else:
                 shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (
                     t.to(hidden_states.dtype) for t in self.adaln_proj(temb))
+                gather = lambda t: t.index_select(0, adaln_indices)  # noqa: E731
 
         use_modulate_fusion = self.fuse_modulate and _can_run_minimax_h3_fusion(hidden_states)
         if use_modulate_fusion:
@@ -567,7 +570,7 @@ class MiniMaxH3TransformerBlock(nn.Module):
             with nvtx_range("minimax_h3.transformer_block.no_modulate_fusion"):
                 norm_hidden_states = self.norm1(hidden_states)
                 norm_hidden_states = norm_hidden_states * (
-                    1.0 + scale_msa.index_select(0, adaln_indices)) + shift_msa.index_select(0, adaln_indices)
+                    1.0 + gather(scale_msa)) + gather(shift_msa)
         with nvtx_range("minimax_h3.transformer_block.self_attention"):
             attention_output = self.attn(norm_hidden_states, rotary_emb, original_seq_len)
         if use_modulate_fusion:
@@ -584,13 +587,13 @@ class MiniMaxH3TransformerBlock(nn.Module):
                 )
         else:
             with nvtx_range("minimax_h3.transformer_block.no_modulate_fusion"):
-                hidden_states = hidden_states + gate_msa.index_select(0, adaln_indices) * attention_output
+                hidden_states = hidden_states + gather(gate_msa) * attention_output
                 norm_hidden_states = self.norm2(hidden_states)
                 norm_hidden_states = norm_hidden_states * (
-                    1.0 + scale_mlp.index_select(0, adaln_indices)) + shift_mlp.index_select(0, adaln_indices)
+                    1.0 + gather(scale_mlp)) + gather(shift_mlp)
         with nvtx_range("minimax_h3.transformer_block.feed_forward"):
             feed_forward_output = self.ff(norm_hidden_states)
-        return hidden_states + gate_mlp.index_select(0, adaln_indices) * feed_forward_output
+        return hidden_states + gather(gate_mlp) * feed_forward_output
 
 
 class MiniMaxH3Transformer3DModel(BaseDiT):
