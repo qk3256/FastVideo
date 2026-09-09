@@ -1,0 +1,10 @@
+{
+  "legacy_git_note": "legacy rows: git_head reconstructed from commit timestamps vs run mtimes",
+  "pack_produced_from": {
+    "collector_run": "rerun_collector_v3",
+    "raw_gemm_dir": "minimax_h3_raw_gemm_v3",
+    "profiler_run": "rerun_profiler_v2",
+    "nsys_run": "rerun_nsys_v2",
+    "evidence_run": "rerun_s3_l4_steps3"
+  }
+}

@@ -1,8 +1,13 @@
-run_id,source_dir,git_head,overrides,active_num_layers,exit_code,completed_steps,all_loss_finite,weight_changed,peak_reserved_gib,step_wall_times_sec
-s1_l1_step1,artifacts/minimax_h3_stage2/s1_l1_step1,834bd64ca03b76443ec702552cc8f92771ec5c9d,"{""models.student.num_transformer_layers"": 1, ""training.loop.max_train_steps"": 1}",1,0,1,True,True,23.18,[3.3133939737454057]
-s2_l4_step1,artifacts/minimax_h3_stage2/s2_l4_step1,834bd64ca03b76443ec702552cc8f92771ec5c9d,"{""models.student.num_transformer_layers"": 4, ""training.loop.max_train_steps"": 1}",4,0,1,True,True,34.75,[6.162991043180227]
-s3_l4_steps3,artifacts/minimax_h3_stage2/s3_l4_steps3,834bd64ca03b76443ec702552cc8f92771ec5c9d,"{""models.student.num_transformer_layers"": 4, ""training.loop.max_train_steps"": 3}",4,0,3,True,True,34.96,"[6.186955629847944, 5.284346870146692, 5.487396704033017]"
-p1_stability_l4_steps7,artifacts/minimax_h3_overnight/p1_stability_l4_steps7,,{},,0,7,True,True,35.0,"[6.541211802046746, 5.289953200612217, 5.46495570614934, 5.275854556821287, 5.39277879986912, 6.011555355042219, 5.665966711938381]"
-p2_runtime_collector_v2_l4_steps3,artifacts/minimax_h3_overnight/p2_runtime_collector_v2_l4_steps3,,{},,0,3,True,True,34.96,"[6.52553524216637, 5.313167499843985, 5.387649348936975]"
-p3_torch_profiler_l4_steps3,artifacts/minimax_h3_overnight/p3_torch_profiler_l4_steps3,,{},,0,3,True,True,34.96,"[6.206921995151788, 5.3627720647491515, 5.523979315999895]"
-p4_nsys_l4_steps3,artifacts/minimax_h3_overnight/p4_nsys_l4_steps3,,{},,0,3,True,True,34.96,"[6.883306263945997, 5.283236826770008, 5.615233786869794]"
+run_id,source_dir,git_head,config_sha256,active_num_layers,exit_code,completed_steps,all_loss_finite,weight_changed,optimizer_steps_observed,peak_reserved_gib
+s1_l1_step1,artifacts/minimax_h3_stage2/s1_l1_step1,834bd64ca03b76443ec702552cc8f92771ec5c9d,ad03846993a7521e3b5f7683be702dd4971770b86a19d12b7bcba640f44a94e0,1,0,1,True,True,[],23.18
+s2_l4_step1,artifacts/minimax_h3_stage2/s2_l4_step1,834bd64ca03b76443ec702552cc8f92771ec5c9d,ad03846993a7521e3b5f7683be702dd4971770b86a19d12b7bcba640f44a94e0,4,0,1,True,True,[],34.75
+s3_l4_steps3,artifacts/minimax_h3_stage2/s3_l4_steps3,834bd64ca03b76443ec702552cc8f92771ec5c9d,ad03846993a7521e3b5f7683be702dd4971770b86a19d12b7bcba640f44a94e0,4,0,3,True,True,[],34.96
+p1_stability_l4_steps7,artifacts/minimax_h3_overnight/p1_stability_l4_steps7,a24ca561b251e70f60abfca659ccbba3a1a10b1f,,4,0,7,True,True,[],35.0
+p2_runtime_collector_l4_steps3,artifacts/minimax_h3_overnight/p2_runtime_collector_l4_steps3,9b53493a7d03be4b2c5a51d20b05a25a1d8e117f,,4,0,3,True,True,[],34.96
+p2_runtime_collector_v2_l4_steps3,artifacts/minimax_h3_overnight/p2_runtime_collector_v2_l4_steps3,389e08e5b0615b19ebfc25dab93c2cf07024f41c,,4,0,3,True,True,"[1, 2, 3]",34.96
+p3_torch_profiler_l4_steps3,artifacts/minimax_h3_overnight/p3_torch_profiler_l4_steps3,7c4e24c2f4ef0037412c297ed606b4182a5f4fd0,,4,0,3,True,True,[],34.96
+p4_nsys_l4_steps3,artifacts/minimax_h3_overnight/p4_nsys_l4_steps3,396d16060f2f8ca220eb537a3a6ca212ada41162,,4,0,3,True,True,[],34.96
+rerun_collector_v3,artifacts/minimax_h3_rerun_8d99ce72/rerun_collector_v3,653040aad121c51eb1c7d37516d8aa6c276d3281,6f28e13183d78f9a036179c9940221a421a3e3427a16ad3c24afcaa5e3914c75,4,0,3,True,True,"[1, 2, 3]",34.96
+rerun_nsys_v2,artifacts/minimax_h3_rerun_8d99ce72/rerun_nsys_v2,653040aad121c51eb1c7d37516d8aa6c276d3281,6f28e13183d78f9a036179c9940221a421a3e3427a16ad3c24afcaa5e3914c75,4,0,3,True,True,"[1, 2, 3, 1, 2, 3]",34.79
+rerun_profiler_v2,artifacts/minimax_h3_rerun_8d99ce72/rerun_profiler_v2,653040aad121c51eb1c7d37516d8aa6c276d3281,6f28e13183d78f9a036179c9940221a421a3e3427a16ad3c24afcaa5e3914c75,4,0,3,True,True,"[1, 2, 3]",34.96
+rerun_s3_l4_steps3,artifacts/minimax_h3_rerun_8d99ce72/rerun_s3_l4_steps3,653040aad121c51eb1c7d37516d8aa6c276d3281,6f28e13183d78f9a036179c9940221a421a3e3427a16ad3c24afcaa5e3914c75,4,0,3,True,True,"[1, 2, 3]",34.96

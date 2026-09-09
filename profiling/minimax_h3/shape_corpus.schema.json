@@ -1,11 +1,105 @@
 {
-  "workload_id": "scope/op_role/phase/MxNxK/dtype \u2014 join key into kernel observations",
-  "provenance": "runtime (hooks) or static (analytic tool)",
-  "layers": {
-    "active_num_layers": 4,
-    "checkpoint_num_layers": 50,
-    "full_model_reference_count": 50,
-    "layer_selection_policy": "prefix_0_to_N_minus_1"
-  },
-  "paired_requirement": "Wgrad rows carry wgrad_operands_paired=true via runtime pairing"
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MiniMax H3 runtime shape corpus row",
+  "type": "object",
+  "required": [
+    "workload_id",
+    "run_id",
+    "provenance",
+    "module_path",
+    "scope",
+    "op_role",
+    "phase",
+    "active_num_layers",
+    "full_model_reference_count",
+    "m",
+    "n",
+    "k",
+    "input",
+    "output",
+    "weight",
+    "observed_call_count_per_rank"
+  ],
+  "properties": {
+    "workload_id": {
+      "type": "string",
+      "description": "join key into raw_gemm rows"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "provenance": {
+      "enum": [
+        "runtime",
+        "static"
+      ]
+    },
+    "module_path": {
+      "type": "string"
+    },
+    "scope": {
+      "enum": [
+        "main_transformer",
+        "text_refiner",
+        "final"
+      ]
+    },
+    "op_role": {
+      "type": "string"
+    },
+    "phase": {
+      "enum": [
+        "Fwd",
+        "RecomputeFwd",
+        "Dgrad",
+        "Wgrad"
+      ]
+    },
+    "active_num_layers": {
+      "type": "integer"
+    },
+    "checkpoint_num_layers": {
+      "type": "integer"
+    },
+    "full_model_reference_count": {
+      "type": "integer",
+      "description": "main=50, text_refiner=2, final=1"
+    },
+    "m": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "n": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "k": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "observed_call_count_per_rank": {
+      "type": "object"
+    },
+    "executed_dtype": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "wgrad_operands_paired": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "wgrad_lhs": {
+      "type": "object"
+    }
+  }
 }
