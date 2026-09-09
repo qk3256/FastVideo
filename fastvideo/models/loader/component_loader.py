@@ -52,13 +52,24 @@ from fastvideo.hooks.layerwise_offload import enable_layerwise_offload
 logger = init_logger(__name__)
 
 
-def _minimax_h3_depth_key_filter(active_layers: int):
-    """Keep all keys except discarded main H3 transformer blocks."""
+def _minimax_h3_depth_key_filter(active_layers: int, checkpoint_layers: int):
+    """Drop retained-window-exterior main blocks; keep illegal keys visible.
+
+    Block indices in ``[active_layers, checkpoint_layers)`` are the reduced-depth
+    window and are skipped.  Indices at or beyond ``checkpoint_layers`` are not a
+    valid checkpoint state: they stay visible so a strict load still raises an
+    unexpected-key error instead of silently swallowing a corrupt checkpoint.
+    """
     pattern = re.compile(r"^transformer_blocks\.(\d+)(?:\.|$)")
 
     def keep(name: str) -> bool:
         match = pattern.match(name)
-        return match is None or int(match.group(1)) < active_layers
+        if match is None:
+            return True
+        index = int(match.group(1))
+        if index >= checkpoint_layers:  # illegal block index must surface at strict load
+            return True
+        return index < active_layers
 
     return keep
 
@@ -84,7 +95,7 @@ def resolve_minimax_h3_loader_depth(cls_name: str, requested: int | None, dit_co
     checkpoint_layers = int(dit_config.arch_config.num_layers)
     active_layers = resolve_minimax_h3_num_layers(requested, checkpoint_layers)
     dit_config.arch_config.num_layers = active_layers
-    return checkpoint_layers, active_layers, _minimax_h3_depth_key_filter(active_layers)
+    return checkpoint_layers, active_layers, _minimax_h3_depth_key_filter(active_layers, checkpoint_layers)
 
 
 class ComponentLoader(ABC):

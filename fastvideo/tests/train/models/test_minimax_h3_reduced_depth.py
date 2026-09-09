@@ -35,11 +35,15 @@ def test_non_h3_loader_does_not_access_num_layers():
 
 
 def test_filter_keeps_first_four_refiner_and_outputs():
-    keep = _minimax_h3_depth_key_filter(4)
+    keep = _minimax_h3_depth_key_filter(4, 50)
     assert keep("transformer_blocks.0.attn.to_q.weight")
     assert keep("transformer_blocks.3.ff.net.2.weight")
     assert not keep("transformer_blocks.4.attn.to_q.weight")
     assert not keep("transformer_blocks.49.adaln_proj.linear.bias")
+    # Illegal block indices beyond the checkpoint depth must stay visible so a
+    # strict load surfaces them as unexpected keys instead of dropping silently.
+    assert keep("transformer_blocks.50.attn.to_q.weight")
+    assert keep("transformer_blocks.999.ff.net.0.weight")
     assert keep("token_refiner.refiner_blocks.1.attn.to_q.weight")
     assert keep("proj_out.weight")
     assert keep("audio_proj_out.bias")
@@ -71,7 +75,7 @@ def test_filter_runs_before_tensor_read_and_broadcast(tmp_path: Path, monkeypatc
             return self.handle.get_tensor(name)
 
     monkeypatch.setattr("fastvideo.models.loader.weight_utils.safe_open", lambda *a, **k: Handle())
-    values = list(safetensors_weights_iterator([str(path)], to_cpu=True, key_filter=_minimax_h3_depth_key_filter(4)))
+    values = list(safetensors_weights_iterator([str(path)], to_cpu=True, key_filter=_minimax_h3_depth_key_filter(4, 50)))
     assert {name for name, _ in values} == {"proj_out.weight", "transformer_blocks.0.weight"}
     assert "transformer_blocks.4.weight" not in seen
 
