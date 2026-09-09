@@ -67,6 +67,7 @@ class MiniMaxH3Model(ModelBase):
         num_transformer_layers: int | None = None,
         attention_backend: AttentionBackendEnum | str | None = AttentionBackendEnum.TORCH_SDPA,
         compile_blocks: bool = False,
+        final_adaln_two_row_backward: bool = False,
     ) -> None:
         """Validate the single-document T2VA contract and load the transformer."""
         super().__init__(
@@ -108,6 +109,12 @@ class MiniMaxH3Model(ModelBase):
         )
         self.noise_scheduler = MiniMaxH3Scheduler(shift=_VIDEO_SCHEDULER_SHIFT)
         self.audio_noise_scheduler = MiniMaxH3Scheduler(shift=_AUDIO_SCHEDULER_SHIFT)
+        if final_adaln_two_row_backward:
+            norm_out = getattr(self.transformer, "norm_out", None)
+            if norm_out is None or not hasattr(norm_out, "two_row_index_backward"):
+                raise RuntimeError("final_adaln_two_row_backward requested but transformer.norm_out is missing")
+            norm_out.two_row_index_backward = True
+            logger.info("final AdaLayerNormOut uses the specialized two-row backward reduction")
         self.dataloader: Any = None
         self.validator: Any = None
         self.start_step = 0
