@@ -44,6 +44,9 @@ class OptimizerConfig:
     lr_num_cycles: int = 0
     lr_power: float = 0.0
     min_lr_ratio: float = 0.5
+    # Use torch's fused AdamW kernel instead of the default foreach
+    # implementation. Requires CUDA params; off by default.
+    fused: bool = False
 
 
 @dataclass(slots=True)
