@@ -51,8 +51,10 @@ training:
     resume_from_checkpoint: ""
 
   tracker:
+    # Empty trackers + empty project_name selects the no-op DummyTracker;
+    # build_tracker force-enables W&B when project_name is non-empty.
     trackers: []
-    project_name: fastvideo_minimax_h3
+    project_name: ""
     run_name: minimax_h3_profile_4layer_2xa100
 
   model:
