@@ -1,0 +1,22 @@
+[
+  {
+    "path": "artifacts/minimax_h3_overnight/p3_torch_profiler_l4_steps3/trace.rank0.json",
+    "bytes": 15844315,
+    "sha256": "42f65f11758577aa976f292c5857cc77c86e30c23175043e22264a09c7abd5e2"
+  },
+  {
+    "path": "artifacts/minimax_h3_overnight/p3_torch_profiler_l4_steps3/trace.rank1.json",
+    "bytes": 15830298,
+    "sha256": "b55e9fbb309aa9006d3a047c4bb796d39d4e2c77779807e4fee49eece2a66449"
+  },
+  {
+    "path": "artifacts/minimax_h3_overnight/p4_nsys_l4_steps3/trace.nsys-rep",
+    "bytes": 2912931,
+    "sha256": "9f102b8f2c9d78d459761882ea62ebec9f83706f0a8b21697bba986b8dad68bf"
+  },
+  {
+    "path": "artifacts/minimax_h3_overnight/p4_nsys_l4_steps3/trace.sqlite",
+    "bytes": 9076736,
+    "sha256": "a73a163fc43e35bf46bbe1e7a8482f16e53737ec7df82f1d8a326aba6efd8890"
+  }
+]

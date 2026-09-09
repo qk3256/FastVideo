@@ -1,0 +1,11 @@
+{
+  "workload_id": "scope/op_role/phase/MxNxK/dtype \u2014 join key into kernel observations",
+  "provenance": "runtime (hooks) or static (analytic tool)",
+  "layers": {
+    "active_num_layers": 4,
+    "checkpoint_num_layers": 50,
+    "full_model_reference_count": 50,
+    "layer_selection_policy": "prefix_0_to_N_minus_1"
+  },
+  "paired_requirement": "Wgrad rows carry wgrad_operands_paired=true via runtime pairing"
+}
