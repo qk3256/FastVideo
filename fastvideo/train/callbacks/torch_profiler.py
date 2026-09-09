@@ -6,7 +6,11 @@ Profiles exactly one stable step of the main reduced-depth configuration
 CPU+CUDA activities, record_shapes, with_flops and profile_memory. NVTX
 record_function ranges wrap prepare_batch / forward / backward / optimizer,
 plus per-target-module forward ranges for Q/K/V/O, FFN gate-up/down and the
-AdaLN projections. Per-rank Chrome traces and key_averages exports (CUDA self
+AdaLN projections. The per-module ranges are mutually exclusive with regional
+block compile (models.student.compile_blocks): record_function hooks cannot
+trace inside fullgraph compiled regions, so they are skipped (with a warning)
+when the student transformer carries the _regional_compile_enabled marker;
+the outer phase ranges stay enabled. Per-rank Chrome traces and key_averages exports (CUDA self
 time and CPU self time, sorted) land in output_dir. with_stack stays off to
 keep traces small. Disabled by default; enable and point output_dir via CLI
 overrides. If profile_memory OOMs, retry with
@@ -118,26 +122,38 @@ class TorchProfilerCallback(Callback):
         self._wrap_record_function(method, "backward", "backward")
         self._wrap_record_function(method, "optimizers_schedulers_step", "optimizer")
         transformer = student.transformer
-        for path, module in transformer.named_modules():
-            role = _role_of(path)
-            if role is None:
-                continue
-            label = f"{_scope_of(path)}/{role}/{path}"
+        if getattr(transformer, "_regional_compile_enabled", False):
+            # Regional block compile (models.student.compile_blocks) is
+            # mutually exclusive with the per-module record_function hooks:
+            # record_function.__enter__ fires inside compiled regions and
+            # fullgraph Dynamo cannot trace it. The outer phase ranges
+            # (prepare_batch/forward/backward/optimizer) wrap around the
+            # compiled regions and stay.
+            logger.warning(
+                "student transformer has regional torch.compile armed; skipping per-module "
+                "record_function hooks (compile and profiler per-module hooks are mutually "
+                "exclusive). Outer phase ranges stay enabled.")
+        else:
+            for path, module in transformer.named_modules():
+                role = _role_of(path)
+                if role is None:
+                    continue
+                label = f"{_scope_of(path)}/{role}/{path}"
 
-            def pre_hook(mod: torch.nn.Module, inputs: tuple, _label: str = label) -> None:
-                self._ranges.append(torch.profiler.record_function(_label))
-                self._ranges[-1].__enter__()
+                def pre_hook(mod: torch.nn.Module, inputs: tuple, _label: str = label) -> None:
+                    self._ranges.append(torch.profiler.record_function(_label))
+                    self._ranges[-1].__enter__()
 
-            def post_hook(mod: torch.nn.Module, inputs: tuple, output: Any, _label: str = label) -> None:
-                if self._ranges and self._ranges[-1] is not None:
-                    rng = self._ranges.pop()
-                    try:
-                        rng.__exit__(None, None, None)
-                    except Exception:
-                        pass
+                def post_hook(mod: torch.nn.Module, inputs: tuple, output: Any, _label: str = label) -> None:
+                    if self._ranges and self._ranges[-1] is not None:
+                        rng = self._ranges.pop()
+                        try:
+                            rng.__exit__(None, None, None)
+                        except Exception:
+                            pass
 
-            self._hooks.append(module.register_forward_pre_hook(pre_hook))
-            self._hooks.append(module.register_forward_hook(post_hook))
+                self._hooks.append(module.register_forward_pre_hook(pre_hook))
+                self._hooks.append(module.register_forward_hook(post_hook))
         activities = [torch.profiler.ProfilerActivity.CPU]
         if torch.cuda.is_available():
             activities.append(torch.profiler.ProfilerActivity.CUDA)
