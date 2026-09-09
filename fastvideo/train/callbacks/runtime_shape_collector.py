@@ -115,9 +115,11 @@ class RuntimeShapeCollectorCallback(Callback):
 
     def _backward_hook(self, path: str, role: str):
         def hook(module: torch.nn.Module, grad_input: tuple[Any, ...], grad_output: tuple[Any, ...]) -> None:
-            if not torch.is_tensor(grad_output[0]):
+            dy = grad_output[0] if grad_output else None
+            if isinstance(dy, (tuple, list)):
+                dy = dy[0] if dy else None
+            if not torch.is_tensor(dy):
                 return
-            dy = grad_output[0]
             dx = grad_input[0] if (grad_input and torch.is_tensor(grad_input[0])) else None
             weight = getattr(module, "weight", None)
             self._emit(path, role, "Dgrad", in_meta=_tensor_meta(dy), out_meta=_tensor_meta(dx),
@@ -131,6 +133,21 @@ class RuntimeShapeCollectorCallback(Callback):
                        extra={"wgrad_lhs_meta": paired, "wgrad_operands_paired": paired is not None})
 
         return hook
+
+    def on_before_optimizer_step(self, method: Any, iteration: int = 0) -> None:
+        # weight.grad is materialized after backward completes; upgrade this
+        # step's buffered Wgrad rows with the REAL gradient tensor metadata.
+        if not self.enabled:
+            return
+        for rec in self._records:
+            if rec["phase"] != "Wgrad":
+                continue
+            module = self._modules.get(rec["module_path"])
+            weight = getattr(module, "weight", None)
+            grad = getattr(weight, "grad", None) if weight is not None else None
+            if torch.is_tensor(grad):
+                rec["output"] = _tensor_meta(grad)
+                rec["wgrad_output_is_real_grad"] = True
 
     def _emit(self, path: str, role: str, phase: str, *, in_meta: Any, out_meta: Any,
               weight_meta: Any, extra: dict[str, Any] | None = None) -> None:
@@ -160,8 +177,10 @@ class RuntimeShapeCollectorCallback(Callback):
             # overwrites it with the replayed observation. Segment-tail modules
             # that never replay still pair their Wgrad with the initial input.
             self._last_fwd_input[path] = x_meta
+        # FastVideo linears return (tensor, bias); unpack to the real output.
+        out_t = output[0] if isinstance(output, (tuple, list)) else output
         self._emit(path, role, phase, in_meta=x_meta,
-                   out_meta=_tensor_meta(output) if torch.is_tensor(output) else None,
+                   out_meta=_tensor_meta(out_t) if torch.is_tensor(out_t) else None,
                    weight_meta=_tensor_meta(weight) if torch.is_tensor(weight) else None)
 
     _modules: dict[str, torch.nn.Module]
@@ -204,6 +223,10 @@ class RuntimeShapeCollectorCallback(Callback):
         logger.info("runtime shape collector: %d target modules hooked on rank %d", len(installed), self._rank)
 
     def on_training_step_end(self, method: Any, loss_dict: dict[str, Any], iteration: int = 0) -> None:
+        # Hook records for this step were buffered while self._step still held
+        # the previous iteration; relabel the buffer to the completed step.
+        for rec in self._records:
+            rec["step"] = iteration
         self._step = iteration
         self._flush()
 

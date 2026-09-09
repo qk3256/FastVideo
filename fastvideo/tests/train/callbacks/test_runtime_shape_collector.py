@@ -96,3 +96,68 @@ def test_collector_disabled_is_noop(tmp_path: Path):
     assert not (tmp_path / "hooks.rank0.jsonl").exists()
     # disabled callback must not wrap method.backward
     assert "flag" not in getattr(method.backward, "__name__", "")
+
+
+class _TupleLinear(nn.Module):
+    """Mimics FastVideo linear convention: forward returns (tensor, bias)."""
+
+    def __init__(self, in_f: int, out_f: int) -> None:
+        super().__init__()
+        with torch.no_grad():
+            self.weight = torch.nn.Parameter(torch.randn(out_f, in_f) * 0.02)
+
+    def forward(self, x: torch.Tensor):
+        return x @ self.weight.t(), None
+
+
+class _TupleFF(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.fc_in = _TupleLinear(8, 32)
+        self.fc_out = _TupleLinear(32, 8)
+
+
+class _TupleBlock(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.ff = _TupleFF()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        y, _ = self.ff.fc_in(x)
+        out, _ = self.ff.fc_out(torch.nn.functional.silu(y))
+        return out
+
+
+class _TupleTransformer(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.transformer_blocks = nn.ModuleList([_TupleBlock()])
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return checkpoint(self.transformer_blocks[0], x, use_reentrant=False)
+
+
+def test_collector_unpacks_tuple_output_and_records_real_wgrad_grad(tmp_path: Path):
+    transformer = _TupleTransformer()
+    method = _fake_method(transformer)
+    cb = RuntimeShapeCollectorCallback(output_dir=str(tmp_path), enabled=True)
+    cb.on_train_start(method, iteration=0)
+
+    x = torch.randn(4, 8, requires_grad=True)
+    loss = transformer(x).sum()
+    method.backward(loss)
+    cb.on_before_optimizer_step(method, iteration=1)
+    cb.on_training_step_end(method, {"total_loss": float(loss.detach())}, iteration=1)
+    cb.on_train_end(method, iteration=1)
+
+    records = [json.loads(l) for l in (tmp_path / "hooks.rank0.jsonl").read_text().splitlines()]
+    fwd = next(r for r in records if r["module_path"].endswith("ff.fc_in") and r["phase"] == "Fwd")
+    assert fwd["output"] is not None
+    assert fwd["output"]["shape"] == [4, 32]
+    assert fwd["output"]["stride"] is not None and fwd["output"]["align256"] is not None
+
+    wgrad = next(r for r in records if r["module_path"].endswith("ff.fc_in") and r["phase"] == "Wgrad")
+    assert wgrad.get("wgrad_output_is_real_grad") is True
+    assert wgrad["output"]["shape"] == [32, 8]
+    assert wgrad["output"]["stride"] is not None
+    assert wgrad["output"]["align16"] is not None
