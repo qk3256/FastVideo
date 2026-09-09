@@ -51,6 +51,21 @@ def _global_weight_checksum(transformer: torch.nn.Module, param_name: str) -> fl
     return float(total.item())
 
 
+def _optimizer_step_count(method: Any) -> int | None:
+    """Read the real optimizer step counter from the first optimizer's state."""
+    try:
+        for opt in method.get_optimizers(0):
+            for group in opt.param_groups:
+                for param in group["params"]:
+                    state = opt.state.get(param)
+                    if state and "step" in state:
+                        value = state["step"]
+                        return int(value.item() if torch.is_tensor(value) else value)
+    except Exception:
+        return None
+    return None
+
+
 class Stage2EvidenceCallback(Callback):
     """Per-step stage-2 evidence: loss/memory/wall-time + weight-change proof."""
 
@@ -112,13 +127,16 @@ class Stage2EvidenceCallback(Callback):
             raise RuntimeError("Stage2EvidenceCallback.on_train_start did not run")
         current = _global_weight_checksum(method.student.transformer, self._checksum_name)
         metrics = {k: float(v) for k, v in loss_dict.items() if isinstance(v, (int, float))}
-        loss_finite = bool(metrics) and all(math.isfinite(v) for v in metrics.values())
+        # Require the real loss term, not just any finite number (step_time_sec
+        # alone would otherwise satisfy a fake "finite" pass).
+        loss_finite = "total_loss" in metrics and math.isfinite(metrics["total_loss"])
         entry = {
             "recorded_at": datetime.now(timezone.utc).isoformat(),
             "rank": self._rank,
             "world_size": self._world,
             "step": iteration,
-            "optimizer_step_counter": iteration,
+            "trainer_step": iteration,
+            "optimizer_step": _optimizer_step_count(method),
             "backward_completed": self._before_opt_step == iteration,
             "optimizer_step_completed": True,  # hook ordering: this runs after optimizers_schedulers_step
             "loss_finite": loss_finite,

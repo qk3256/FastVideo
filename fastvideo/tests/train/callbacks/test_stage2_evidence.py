@@ -40,7 +40,8 @@ def test_evidence_records_weight_change_and_step_fields(tmp_path: Path):
     assert len(lines) == 2
     first = json.loads(lines[0])
     assert first["step"] == 1
-    assert first["optimizer_step_counter"] == 1
+    assert first["trainer_step"] == 1
+    assert first["optimizer_step"] is None  # fake method exposes no optimizer state
     assert first["backward_completed"] is True
     assert first["optimizer_step_completed"] is True
     assert first["loss_finite"] is True
@@ -65,6 +66,18 @@ def test_evidence_flags_unchanged_weight_and_nonfinite_loss(tmp_path: Path):
     assert entry["weight_changed"] is False
     assert entry["loss_finite"] is False
     assert entry["backward_completed"] is False
+
+
+def test_evidence_flags_missing_total_loss_as_not_finite(tmp_path: Path):
+    """A metrics dict with only timing fields must NOT count as a finite loss."""
+    method = _fake_method()
+    cb = Stage2EvidenceCallback(output_dir=str(tmp_path))
+    cb.on_train_start(method, iteration=0)
+    cb.on_before_optimizer_step(method, iteration=1)
+    cb.on_training_step_end(method, {"step_time_sec": 0.5}, iteration=1)
+
+    entry = json.loads((tmp_path / "metrics.rank0.jsonl").read_text().strip())
+    assert entry["loss_finite"] is False
 
 
 def test_checksum_param_hint_prefers_retained_block_zero(tmp_path: Path):
