@@ -17,6 +17,16 @@ if TYPE_CHECKING:
         TrackerConfig,
     )
 
+# Explicit opt-out tokens for ``trackers:`` in run YAML.  ``build_tracker``
+# auto-enables W&B when the tracker list is empty and a project name is set,
+# so fully-offline runs need an explicit, non-empty way to say "no tracker".
+_DISABLED_TRACKER_TOKENS = {"none", "off", "disabled"}
+
+
+def _coerce_trackers(trackers: list[str]) -> list[str]:
+    """Drop explicit disable tokens; leave real tracker names untouched."""
+    return [t for t in trackers if str(t).lower() not in _DISABLED_TRACKER_TOKENS]
+
 
 def build_tracker(
     tracker_config: TrackerConfig,
@@ -28,7 +38,7 @@ def build_tracker(
 
     world_group = get_world_group()
 
-    trackers = list(tracker_config.trackers)
+    trackers = _coerce_trackers(list(tracker_config.trackers))
     if not trackers and str(tracker_config.project_name):
         trackers.append(Trackers.WANDB.value)
     if world_group.rank != 0:

@@ -51,10 +51,11 @@ training:
     resume_from_checkpoint: ""
 
   tracker:
-    # Empty trackers + empty project_name selects the no-op DummyTracker;
-    # build_tracker force-enables W&B when project_name is non-empty.
-    trackers: []
-    project_name: ""
+    # "none" is an explicit opt-out token handled by build_tracker; without it
+    # an empty trackers list is force-upgraded to W&B whenever project_name is
+    # non-empty (and the config parser itself maps "" back to "fastvideo").
+    trackers: ["none"]
+    project_name: fastvideo_minimax_h3
     run_name: minimax_h3_profile_4layer_2xa100
 
   model:
