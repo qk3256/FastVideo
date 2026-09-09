@@ -1,21 +1,27 @@
 {
   "stage": 0,
-  "captured_at": "2026-09-09T00:19:43+00:00",
+  "captured_at": "2026-09-09T04:51:03+00:00",
   "identity": {
     "upstream_baseline_commit": "556ac7088e7b4750806d277d31e0db6cd25a5238",
     "upstream_baseline_subject": "[refactor] Simplify Wan sampling and tests (#1825)",
-    "experiment_code_commit": "52efa8cc031594b1a1094b51702badfbeb6e027f",
+    "experiment_code_commit": "396d16060f2f8ca220eb537a3a6ca212ada41162",
     "branch": "minimax-h3-profile",
     "origin_url": "git@github.com:qk3256/FastVideo.git",
     "upstream_url": "https://github.com/hao-ai-lab/FastVideo.git",
     "baseline_is_ancestor_of_experiment": true,
     "source_worktree_clean": false,
     "worktree_overlays": [
+      " M docs/minimax_h3_stage0_baseline.json",
+      " M docs/minimax_h3_stage0_baseline.md",
       " M fastvideo-kernel/CMakeLists.txt",
-      "?? artifacts/",
-      "?? docs/minimax_h3_stage0_baseline.json",
-      "?? docs/minimax_h3_stage0_baseline.md"
-    ]
+      "?? artifacts/"
+    ],
+    "upstream_main_head_at_report": "a943220c115228ade5d57b3bab9a6a87fd600a10",
+    "kernel_cmakelists_overlay": {
+      "present": true,
+      "diff_sha256": "3666f9aa89220b50e34299f5d47797202312bcf6ea0da95d62bef789e10b510d",
+      "impact": "kernel build-only (C++ std 17); TORCH_SDPA training path never loads fastvideo-kernel"
+    }
   },
   "experiment_contract": {
     "measurement_model": "measured_reduced_model",
@@ -122,9 +128,10 @@
     },
     "text_tokens": 21,
     "video_tokens_global": 37296,
-    "audio_tokens_global": 207,
-    "packed_tokens_global": 37524,
-    "packed_tokens_sp_local": 18762,
+    "audio_tokens_global": 414,
+    "packed_tokens_global": 37731,
+    "packed_tokens_sp_padded": 37732,
+    "packed_tokens_sp_local": 18866,
     "sp_size": 2
   },
   "checks": {
@@ -135,10 +142,10 @@
     "source_worktree_clean": {
       "passed": false,
       "observed": [
+        " M docs/minimax_h3_stage0_baseline.json",
+        " M docs/minimax_h3_stage0_baseline.md",
         " M fastvideo-kernel/CMakeLists.txt",
-        "?? artifacts/",
-        "?? docs/minimax_h3_stage0_baseline.json",
-        "?? docs/minimax_h3_stage0_baseline.md"
+        "?? artifacts/"
       ],
       "note": "only untracked runtime artifacts permitted"
     },

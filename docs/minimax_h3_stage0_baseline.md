@@ -3,10 +3,10 @@
 ## Identity
 
 - upstream baseline commit: `556ac7088e7b4750806d277d31e0db6cd25a5238` (`[refactor] Simplify Wan sampling and tests (#1825)`)
-- experiment code commit at doc generation: `52efa8cc031594b1a1094b51702badfbeb6e027f` on branch `minimax-h3-profile`
+- experiment code commit at doc generation: `396d16060f2f8ca220eb537a3a6ca212ada41162` on branch `minimax-h3-profile`
 - remotes: origin `git@github.com:qk3256/FastVideo.git`, upstream `https://github.com/hao-ai-lab/FastVideo.git`
 - baseline is ancestor of experiment HEAD: **True**
-- tracked-file modifications at generation time: [' M fastvideo-kernel/CMakeLists.txt'] (untracked runtime artifacts: 3)
+- tracked-file modifications at generation time: [' M docs/minimax_h3_stage0_baseline.json', ' M docs/minimax_h3_stage0_baseline.md', ' M fastvideo-kernel/CMakeLists.txt'] (untracked runtime artifacts: 1)
 
 The per-run `run_manifest.json` stamps the exact `experiment_code_commit` again at
 training launch; this document pins the upstream baseline identity.
@@ -40,18 +40,18 @@ training launch; this document pins the upstream baseline identity.
 - `/home/why/workspace/project/FastVideo/data/crush-smol_h3_t2va_single_sample_preprocessed/data_00000.parquet` (14683428 bytes, sha256 `f179164af84c6bbb988cf39d303c36c5c0d350363563424729c9d9b028a27ab0`)
 - rows: 1, file `1gGQy4nxyUo-Scene-016.mp4`, caption: "A watermelon wearing a helmet is crushed by a hydraulic press, causing it to flatten and burst open."
 - video latent shape [24, 37, 48, 84] (finite=True)
-- audio latent shape [2, 32, 207]
+- audio latent shape [2, 32, 207] (stereo channels unroll to token rows)
 - text embedding shape [21, 5120]; real text tokens = 21
 - geometry: 124 frames -> num_latent_t 37, 1344x768, fps 24.0
-- tokens: video 37296, audio 207, text 21;
-  packed global 37524, SP-local (SP=2) 18762
+- tokens: video 37296, audio 414, text 21;
+  packed global 37731, SP-padded 37732, SP-local (SP=2) 18866
 
 ## Checks
 
 | check | passed | observed |
 |---|---|---|
 | baseline_is_ancestor | True | `"merge-base --is-ancestor 556ac708 HEAD -> rc=0"` |
-| source_worktree_clean | False | `[" M fastvideo-kernel/CMakeLists.txt", "?? artifacts/", "?? docs/minimax_h3_stage0_baseline.json", "?? docs/minimax_h3_stage0_baseline.md"]` |
+| source_worktree_clean | False | `[" M docs/minimax_h3_stage0_baseline.json", " M docs/minimax_h3_stage0_baseline.md", " M fastvideo-kernel/CMakeLists.txt", "?? artifacts/"]` |
 | model_manifest_complete | True | `{"checkpoint_num_layers": 50, "safetensors_shard_count": 14, "safetensors_total_bytes": 66280504216}` |
 | dataset_manifest_complete | True | `{"rows": 1, "parquet": "/home/why/workspace/project/FastVideo/data/crush-smol_h3_t2va_single_sample_preprocessed/data_00000.parquet"}` |
 | cuda_available | True | `true` |
