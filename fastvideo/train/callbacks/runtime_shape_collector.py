@@ -155,7 +155,10 @@ class RuntimeShapeCollectorCallback(Callback):
         weight = getattr(self._modules.get(path), "weight", None)
         x_meta = _tensor_meta(x)
         phase = self._phase()
-        if phase == "RecomputeFwd" and x_meta is not None:
+        if x_meta is not None:
+            # Cache the input metadata on every forward; a checkpoint recompute
+            # overwrites it with the replayed observation. Segment-tail modules
+            # that never replay still pair their Wgrad with the initial input.
             self._last_fwd_input[path] = x_meta
         self._emit(path, role, phase, in_meta=x_meta,
                    out_meta=_tensor_meta(output) if torch.is_tensor(output) else None,
@@ -241,6 +244,11 @@ class RuntimeShapeCollectorCallback(Callback):
                     anomalies.append(f"{rec['module_path']}:{rec['phase']} {meta_key} misaligned<16B")
         targets = json.loads((self.output_dir / f"collector_meta.rank{self._rank}.json")
                              .read_text())["targets"]
+        wgrad_paired: dict[str, bool] = {}
+        for rec in records:
+            if rec["phase"] == "Wgrad":
+                wgrad_paired[rec["module_path"]] = wgrad_paired.get(rec["module_path"], True) and bool(
+                    rec.get("wgrad_operands_paired"))
         module_checks = {}
         for target in targets:
             path = target["module_path"]
@@ -251,12 +259,14 @@ class RuntimeShapeCollectorCallback(Callback):
                 "observed_call_count": phases,
                 "has_all_phases": all(v > 0 for k, v in phases.items() if k != "RecomputeFwd"),
                 "recompute_replayed": phases["RecomputeFwd"] > 0,
+                "wgrad_operands_paired": wgrad_paired.get(path, False),
             }
         return {
             "rank": self._rank,
             "record_count": len(records),
             "module_checks": module_checks,
             "all_targets_complete": all(v["has_all_phases"] for v in module_checks.values()),
+            "wgrad_paired_everywhere": all(v["wgrad_operands_paired"] for v in module_checks.values()),
             # Checkpoint recompute replays only ops whose outputs are needed by
             # autograd; segment-tail modules legitimately replay zero times.
             "recompute_observed_anywhere": any(v["recompute_replayed"] for v in module_checks.values()),

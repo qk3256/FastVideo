@@ -78,12 +78,15 @@ def test_collector_observes_fwd_recompute_dgrad_wgrad(tmp_path: Path):
     report = json.loads((tmp_path / "collector_report.rank0.json").read_text())
     assert report["all_targets_complete"] is True
     assert report["recompute_observed_anywhere"] is True
+    assert report["wgrad_paired_everywhere"] is True
     assert report["module_checks"][path]["observed_call_count"]["Fwd"] == 2  # initial forwards only
     assert report["module_checks"][path]["observed_call_count"]["RecomputeFwd"] == 2
-    # Segment-tail module: autograd does not need its forward replayed.
+    # Segment-tail module: autograd does not need its forward replayed, but its
+    # Wgrad must still pair with the initial-forward input metadata.
     tail = report["module_checks"]["transformer_blocks.0.ff.fc_out"]
     assert tail["observed_call_count"]["Fwd"] >= 2
     assert tail["observed_call_count"]["Wgrad"] == 2
+    assert tail["wgrad_operands_paired"] is True
 
 
 def test_collector_disabled_is_noop(tmp_path: Path):
