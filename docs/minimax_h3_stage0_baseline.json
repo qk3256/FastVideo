@@ -1,0 +1,185 @@
+{
+  "stage": 0,
+  "captured_at": "2026-09-09T00:19:43+00:00",
+  "identity": {
+    "upstream_baseline_commit": "556ac7088e7b4750806d277d31e0db6cd25a5238",
+    "upstream_baseline_subject": "[refactor] Simplify Wan sampling and tests (#1825)",
+    "experiment_code_commit": "52efa8cc031594b1a1094b51702badfbeb6e027f",
+    "branch": "minimax-h3-profile",
+    "origin_url": "git@github.com:qk3256/FastVideo.git",
+    "upstream_url": "https://github.com/hao-ai-lab/FastVideo.git",
+    "baseline_is_ancestor_of_experiment": true,
+    "source_worktree_clean": false,
+    "worktree_overlays": [
+      " M fastvideo-kernel/CMakeLists.txt",
+      "?? artifacts/",
+      "?? docs/minimax_h3_stage0_baseline.json",
+      "?? docs/minimax_h3_stage0_baseline.md"
+    ]
+  },
+  "experiment_contract": {
+    "measurement_model": "measured_reduced_model",
+    "full_model_reference_is_static_only": true,
+    "checkpoint_num_layers": 50,
+    "active_num_layers": 4,
+    "smoke_active_num_layers": 1,
+    "fallback_active_num_layers": 2,
+    "token_refiner_layers": 2,
+    "training": "full_parameter_sft",
+    "dtype": "bfloat16",
+    "per_gpu_batch_size": 1,
+    "gpu_count": 2,
+    "fsdp": {
+      "shard": 2,
+      "replicate": 1
+    },
+    "sequence_parallel": 2,
+    "activation_checkpointing": "full",
+    "optimizer_steps": {
+      "ramp": [
+        1,
+        1,
+        3
+      ]
+    },
+    "validation_save_tracker_disabled": true
+  },
+  "environment": {
+    "python_executable": "/home/why/miniconda3/envs/fastvideo/bin/python",
+    "python_version": "3.11.16",
+    "torch": "2.12.0+cu126",
+    "torch_cuda": "12.6",
+    "cuda_available": true,
+    "cuda_device_count": 2,
+    "nccl_version": [
+      2,
+      29,
+      3
+    ],
+    "driver": "570.133.20",
+    "gpu_names": [
+      "NVIDIA A100-SXM4-40GB",
+      "NVIDIA A100-SXM4-40GB"
+    ],
+    "gpu_memory_mib": [
+      40442,
+      40442
+    ],
+    "world_size": 2
+  },
+  "model_manifest": {
+    "path": "/home/why/workspace/project/FastVideo/data/models/MiniMax-H3",
+    "exists": true,
+    "model_index_sha256": "5a587fe13b2371427415ac892463142683aefcd8d322e274a3a095eac37ac7d2",
+    "transformer_config_sha256": "74c11bff524336576096993cbfcdcdc2ef4fa2fa4409df693bdcbc6c666282ae",
+    "transformer_index_sha256": "ac30a3b58963f2e735d493475fbb81853a5735ec947619648b3e045acda6783e",
+    "checkpoint_num_layers": 50,
+    "safetensors_shard_count": 14,
+    "safetensors_total_bytes": 66280504216
+  },
+  "input_manifest": {
+    "path": "/home/why/workspace/project/FastVideo/data/crush-smol_h3_t2va_single_sample_preprocessed/data_00000.parquet",
+    "size_bytes": 14683428,
+    "sha256": "f179164af84c6bbb988cf39d303c36c5c0d350363563424729c9d9b028a27ab0",
+    "num_rows": 1,
+    "file_name": "1gGQy4nxyUo-Scene-016.mp4",
+    "caption": "A watermelon wearing a helmet is crushed by a hydraulic press, causing it to flatten and burst open.",
+    "num_frames": 124,
+    "fps": 24.0,
+    "duration_sec": 5.166666666666667,
+    "width": 1344,
+    "height": 768,
+    "audio_sample_rate": 32000,
+    "video_latent": {
+      "shape": [
+        24,
+        37,
+        48,
+        84
+      ],
+      "dtype": "float32",
+      "finite": true,
+      "value_checksum": 273784.702643714
+    },
+    "audio_latent": {
+      "shape": [
+        2,
+        32,
+        207
+      ],
+      "dtype": "float32",
+      "finite": true,
+      "value_checksum": 555.2290991843001
+    },
+    "text_embedding": {
+      "shape": [
+        21,
+        5120
+      ],
+      "dtype": "float32",
+      "finite": true,
+      "value_checksum": 18807.987335205078
+    },
+    "text_tokens": 21,
+    "video_tokens_global": 37296,
+    "audio_tokens_global": 207,
+    "packed_tokens_global": 37524,
+    "packed_tokens_sp_local": 18762,
+    "sp_size": 2
+  },
+  "checks": {
+    "baseline_is_ancestor": {
+      "passed": true,
+      "observed": "merge-base --is-ancestor 556ac708 HEAD -> rc=0"
+    },
+    "source_worktree_clean": {
+      "passed": false,
+      "observed": [
+        " M fastvideo-kernel/CMakeLists.txt",
+        "?? artifacts/",
+        "?? docs/minimax_h3_stage0_baseline.json",
+        "?? docs/minimax_h3_stage0_baseline.md"
+      ],
+      "note": "only untracked runtime artifacts permitted"
+    },
+    "model_manifest_complete": {
+      "passed": true,
+      "observed": {
+        "checkpoint_num_layers": 50,
+        "safetensors_shard_count": 14,
+        "safetensors_total_bytes": 66280504216
+      }
+    },
+    "dataset_manifest_complete": {
+      "passed": true,
+      "observed": {
+        "rows": 1,
+        "parquet": "/home/why/workspace/project/FastVideo/data/crush-smol_h3_t2va_single_sample_preprocessed/data_00000.parquet"
+      }
+    },
+    "cuda_available": {
+      "passed": true,
+      "observed": true
+    },
+    "gpu_count_is_2": {
+      "passed": true,
+      "observed": 2
+    },
+    "two_rank_nccl_smoke_passed": {
+      "passed": true,
+      "observed": "2-rank all-reduce mean=3.0 on both ranks, NCCL (2,29,3), clean exit"
+    },
+    "reduced_depth_config_present": {
+      "passed": true,
+      "observed": "examples/train/configs/profile_minimax_h3_t2va_2xa100.yaml"
+    },
+    "offline_inputs_ready": {
+      "passed": true,
+      "observed": {
+        "model_dir": "/home/why/workspace/project/FastVideo/data/models/MiniMax-H3",
+        "parquet": "/home/why/workspace/project/FastVideo/data/crush-smol_h3_t2va_single_sample_preprocessed/data_00000.parquet"
+      }
+    }
+  },
+  "status": "complete"
+}
