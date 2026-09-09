@@ -75,4 +75,10 @@ callbacks:
     # --callbacks.runtime_shape_collector.enabled true and override output_dir.
     enabled: false
     output_dir: artifacts/minimax_h3_stage2/unset
+  torch_profiler:
+    _target_: fastvideo.train.callbacks.torch_profiler.TorchProfilerCallback
+    # Off by default; enable per run with --callbacks.torch_profiler.enabled true.
+    enabled: false
+    profile_memory: true
+    output_dir: artifacts/minimax_h3_stage2/unset
 pipeline: {}
