@@ -425,6 +425,24 @@ class MiniMaxH3AdaLayerNormModulation(nn.Module):
         return temb.view(-1, 6 * self.hidden_size).chunk(6, dim=-1)
 
 
+def _fused_adaln_gather(
+    modulation: "MiniMaxH3AdaLayerNormModulation",
+    temb: torch.Tensor,
+    adaln_indices: torch.Tensor,
+    target_dtype: torch.dtype,
+) -> list[torch.Tensor]:
+    """Gather all six AdaLN tables with a single row gather (training opt-in).
+
+    The modulation linear emits all six tables contiguously per
+    (timestep, modality) row, so gathering the full-width row and then
+    chunking is value-identical to six per-table gathers while cutting the
+    index-kernel count roughly 6x per block.
+    """
+    raw, _ = modulation.linear(F.silu(temb).to(modulation.linear.weight.dtype))
+    gathered = raw.view(-1, 6 * modulation.hidden_size).index_select(0, adaln_indices)
+    return list(gathered.to(target_dtype).chunk(6, dim=-1))
+
+
 class MiniMaxH3AdaLayerNormOut(nn.Module):
     """Final RMSNorm with per-timestep row modulation."""
 
@@ -525,14 +543,11 @@ class MiniMaxH3TransformerBlock(nn.Module):
         original_seq_len: int,
     ) -> torch.Tensor:
         with nvtx_range("minimax_h3.transformer_block.adaln_projection"):
-            if getattr(self, "fuse_adaln_gather", False):
-                # One row-gather over the joint modulation output instead of six
-                # (one per table). The linear already emits all six tables
-                # contiguously per (timestep, modality) row, so gather-then-chunk
-                # is value-identical and cuts 6 index kernels to 1 per block.
-                mod = self.adaln_proj.linear(F.silu(temb).to(self.adaln_proj.linear.weight.dtype))[0]
-                fused = mod.index_select(0, adaln_indices).to(hidden_states.dtype)
-                shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = fused.chunk(6, dim=-1)
+            if self.fuse_adaln_gather:
+                # One row-gather over the joint modulation output instead of
+                # six per table; value-identical (see unit test).
+                shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = _fused_adaln_gather(
+                    self.adaln_proj, temb, adaln_indices, hidden_states.dtype)
             else:
                 shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (
                     t.to(hidden_states.dtype) for t in self.adaln_proj(temb))
