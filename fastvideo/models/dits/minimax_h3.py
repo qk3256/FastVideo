@@ -447,6 +447,9 @@ class MiniMaxH3AdaLayerNormOut(nn.Module):
             quant_config=quant_config,
             prefix=f"{prefix}.linear",
         )
+        # Opt-in experiment: replace the two index_select backward scatter-adds
+        # with the specialized two-row reduction (forward values unchanged).
+        self.two_row_index_backward = False
 
     def forward(
         self,
@@ -459,6 +462,10 @@ class MiniMaxH3AdaLayerNormOut(nn.Module):
         shift_scale, _ = self.linear(temb.to(self.linear.weight.dtype))
         shift, scale = shift_scale.chunk(2, dim=-1)
         hidden_states = self.norm(hidden_states)
+        if self.two_row_index_backward:
+            from fastvideo.layers.two_row_index_reduce import two_row_index_select
+            return hidden_states * (1.0 + two_row_index_select(scale, timestep_indices)) + \
+                two_row_index_select(shift, timestep_indices)
         return hidden_states * (1.0 + scale.index_select(0, timestep_indices)) + shift.index_select(0, timestep_indices)
 
 

@@ -9,6 +9,7 @@ import torch
 
 from fastvideo.distributed import get_sp_group
 from fastvideo.forward_context import set_forward_context
+from fastvideo.logger import init_logger
 from fastvideo.models.schedulers.scheduling_minimax_h3 import MiniMaxH3Scheduler
 from fastvideo.pipelines import TrainingBatch
 from fastvideo.pipelines.basic.minimax_h3.packing import (
@@ -39,6 +40,8 @@ _AUDIO_SCHEDULER_SHIFT = 3.0
 _VIDEO_LATENT_CHANNELS = 24
 _AUDIO_LATENT_CHANNELS = 32
 
+logger = init_logger(__name__)
+
 
 def shift_noise_amount(base_noise_amount: torch.Tensor, shift: float) -> torch.Tensor:
     """Apply the MiniMax H3 rational shift to a unit noise amount."""
@@ -63,6 +66,7 @@ class MiniMaxH3Model(ModelBase):
         transformer_override_safetensor: str | None = None,
         num_transformer_layers: int | None = None,
         attention_backend: AttentionBackendEnum | str | None = AttentionBackendEnum.TORCH_SDPA,
+        final_adaln_two_row_backward: bool = False,
     ) -> None:
         """Validate the single-document T2VA contract and load the transformer."""
         super().__init__(
@@ -103,6 +107,12 @@ class MiniMaxH3Model(ModelBase):
         )
         self.noise_scheduler = MiniMaxH3Scheduler(shift=_VIDEO_SCHEDULER_SHIFT)
         self.audio_noise_scheduler = MiniMaxH3Scheduler(shift=_AUDIO_SCHEDULER_SHIFT)
+        if final_adaln_two_row_backward:
+            norm_out = getattr(self.transformer, "norm_out", None)
+            if norm_out is None or not hasattr(norm_out, "two_row_index_backward"):
+                raise RuntimeError("final_adaln_two_row_backward requested but transformer.norm_out is missing")
+            norm_out.two_row_index_backward = True
+            logger.info("final AdaLayerNormOut uses the specialized two-row backward reduction")
         self.dataloader: Any = None
         self.validator: Any = None
         self.start_step = 0
