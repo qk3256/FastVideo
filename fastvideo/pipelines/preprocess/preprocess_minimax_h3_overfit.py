@@ -339,7 +339,9 @@ def main() -> None:
         hsdp_shard_dim=1,
         use_fsdp_inference=False,
         vae_cpu_offload=False,
-        text_encoder_cpu_offload=False,
+        # The 66GB bf16 Qwen3-VL encoder exceeds one 40GB A100; build it on
+        # CPU and shard-offload it instead of materializing it on the GPU.
+        text_encoder_cpu_offload=True,
     )
     video_latents = encode_video_latents(frames, resolved_model_path, model_index, fastvideo_args)
     audio_latents = encode_audio_latents(waveform, resolved_model_path, model_index, fastvideo_args)
