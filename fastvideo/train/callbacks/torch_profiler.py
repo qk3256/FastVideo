@@ -60,10 +60,12 @@ def _export_key_averages(prof: Any, path_prefix: Path) -> dict[str, int]:
 class TorchProfilerCallback(Callback):
     """One-step CPU+CUDA profiler with NVTX phase ranges for H3 runs."""
 
-    def __init__(self, *, output_dir: str, enabled: bool = False, profile_memory: bool = True) -> None:
+    def __init__(self, *, output_dir: str, enabled: bool = False, profile_memory: bool = True,
+                 with_stack: bool = False) -> None:
         self.output_dir = Path(output_dir)
         self.enabled = bool(enabled)
         self.profile_memory = bool(profile_memory)
+        self.with_stack = bool(with_stack)
         self._rank = 0
         self._prof: Any = None
         self._records = 0
@@ -88,7 +90,7 @@ class TorchProfilerCallback(Callback):
             "profile_memory": self.profile_memory,
             "record_shapes": True,
             "with_flops": True,
-            "with_stack": False,
+            "with_stack": self.with_stack,
             "key_average_rows": counts,
         }
         (self.output_dir / f"profiler_meta.rank{self._rank}.json").write_text(json.dumps(meta, indent=2) + "\n")
@@ -148,7 +150,7 @@ class TorchProfilerCallback(Callback):
             record_shapes=True,
             with_flops=True,
             profile_memory=self.profile_memory,
-            with_stack=False,
+            with_stack=self.with_stack,
         )
         self._prof.__enter__()
         logger.info("torch profiler armed (wait=1 warmup=1 active=1) on rank %d", self._rank)
