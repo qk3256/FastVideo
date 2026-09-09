@@ -512,6 +512,9 @@ class MiniMaxH3TransformerBlock(nn.Module):
             apply_silu=adaln_apply_silu,
         )
         self.fuse_modulate = fuse_modulate
+        # Training-side gather fusion for the six AdaLN tables (off by default
+        # unless the profiling run opts in via the model wrapper).
+        self.fuse_adaln_gather = False
 
     def forward(
         self,
@@ -522,8 +525,17 @@ class MiniMaxH3TransformerBlock(nn.Module):
         original_seq_len: int,
     ) -> torch.Tensor:
         with nvtx_range("minimax_h3.transformer_block.adaln_projection"):
-            shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (
-                t.to(hidden_states.dtype) for t in self.adaln_proj(temb))
+            if getattr(self, "fuse_adaln_gather", False):
+                # One row-gather over the joint modulation output instead of six
+                # (one per table). The linear already emits all six tables
+                # contiguously per (timestep, modality) row, so gather-then-chunk
+                # is value-identical and cuts 6 index kernels to 1 per block.
+                mod = self.adaln_proj.linear(F.silu(temb).to(self.adaln_proj.linear.weight.dtype))[0]
+                fused = mod.index_select(0, adaln_indices).to(hidden_states.dtype)
+                shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = fused.chunk(6, dim=-1)
+            else:
+                shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (
+                    t.to(hidden_states.dtype) for t in self.adaln_proj(temb))
 
         use_modulate_fusion = self.fuse_modulate and _can_run_minimax_h3_fusion(hidden_states)
         if use_modulate_fusion:
