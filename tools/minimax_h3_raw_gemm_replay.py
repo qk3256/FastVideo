@@ -16,6 +16,7 @@ Wgrad replays X with the runtime-paired layout from wgrad_lhs_meta.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 from pathlib import Path
