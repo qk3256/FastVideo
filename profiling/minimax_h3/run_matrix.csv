@@ -8,6 +8,7 @@ p2_runtime_collector_v2_l4_steps3,artifacts/minimax_h3_overnight/p2_runtime_coll
 p3_torch_profiler_l4_steps3,artifacts/minimax_h3_overnight/p3_torch_profiler_l4_steps3,7c4e24c2f4ef0037412c297ed606b4182a5f4fd0,,4,0,3,True,True,[],34.96
 p4_nsys_l4_steps3,artifacts/minimax_h3_overnight/p4_nsys_l4_steps3,396d16060f2f8ca220eb537a3a6ca212ada41162,,4,0,3,True,True,[],34.96
 rerun_collector_v3,artifacts/minimax_h3_rerun_8d99ce72/rerun_collector_v3,653040aad121c51eb1c7d37516d8aa6c276d3281,6f28e13183d78f9a036179c9940221a421a3e3427a16ad3c24afcaa5e3914c75,4,0,3,True,True,"[1, 2, 3]",34.96
+rerun_collector_v4,artifacts/minimax_h3_rerun_8d99ce72/rerun_collector_v4,,,,0,3,True,True,"[1, 2, 3]",34.96
 rerun_nsys_v2,artifacts/minimax_h3_rerun_8d99ce72/rerun_nsys_v2,653040aad121c51eb1c7d37516d8aa6c276d3281,6f28e13183d78f9a036179c9940221a421a3e3427a16ad3c24afcaa5e3914c75,4,0,3,True,True,"[1, 2, 3, 1, 2, 3]",34.79
 rerun_profiler_v2,artifacts/minimax_h3_rerun_8d99ce72/rerun_profiler_v2,653040aad121c51eb1c7d37516d8aa6c276d3281,6f28e13183d78f9a036179c9940221a421a3e3427a16ad3c24afcaa5e3914c75,4,0,3,True,True,"[1, 2, 3]",34.96
 rerun_s3_l4_steps3,artifacts/minimax_h3_rerun_8d99ce72/rerun_s3_l4_steps3,653040aad121c51eb1c7d37516d8aa6c276d3281,6f28e13183d78f9a036179c9940221a421a3e3427a16ad3c24afcaa5e3914c75,4,0,3,True,True,"[1, 2, 3]",34.96

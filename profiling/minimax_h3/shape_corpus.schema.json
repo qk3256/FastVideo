@@ -20,6 +20,64 @@
     "weight",
     "observed_call_count_per_rank"
   ],
+  "$defs": {
+    "tensor_meta": {
+      "type": "object",
+      "required": [
+        "shape",
+        "stride",
+        "dtype",
+        "contiguous",
+        "storage_offset",
+        "align16",
+        "align256"
+      ],
+      "properties": {
+        "shape": {
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "stride": {
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "dtype": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "contiguous": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "storage_offset": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "align16": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "align256": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    }
+  },
   "properties": {
     "workload_id": {
       "type": "string",
@@ -83,6 +141,15 @@
         "null"
       ]
     },
+    "input": {
+      "$ref": "#/$defs/tensor_meta"
+    },
+    "output": {
+      "$ref": "#/$defs/tensor_meta"
+    },
+    "weight": {
+      "$ref": "#/$defs/tensor_meta"
+    },
     "observed_call_count_per_rank": {
       "type": "object"
     },
@@ -92,6 +159,9 @@
         "null"
       ]
     },
+    "raw_equivalent_workload_id": {
+      "type": "string"
+    },
     "wgrad_operands_paired": {
       "type": [
         "boolean",
@@ -99,7 +169,10 @@
       ]
     },
     "wgrad_lhs": {
-      "type": "object"
+      "$ref": "#/$defs/tensor_meta"
+    },
+    "wgrad_output_is_real_grad": {
+      "type": "boolean"
     }
   }
 }
