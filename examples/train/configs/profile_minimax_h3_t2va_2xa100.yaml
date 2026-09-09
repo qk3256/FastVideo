@@ -81,4 +81,11 @@ callbacks:
     enabled: false
     profile_memory: true
     output_dir: artifacts/minimax_h3_stage2/unset
+  nsys_capture:
+    _target_: fastvideo.train.callbacks.nsys_capture.NsysCaptureCallback
+    # Off by default; brackets step 3 between cudaProfilerStart/Stop for nsys
+    # --capture-range=cudaProfilerApi runs.
+    enabled: false
+    start_after_step: 2
+    stop_step: 3
 pipeline: {}
