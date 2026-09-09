@@ -54,6 +54,10 @@ branch: minimax-h3-profile (fork qk3256/FastVideo), upstream baseline 556ac708
   already casts; nsys proves bf16 kernels). See commit history note; no model code merged.
 - layer sweep 5/6/7: SKIPPED by rule — N=4 peak reserved 34.96 GiB exceeds the 34 GiB
   continue gate; predicted N=5 ≈ 37.9 GiB > 35 GiB stop threshold. primary_profile_layers = 4.
+- candidate "fused AdaLN row gather": tested on branch minimax-h3-fuse-adaln-gather,
+  numerically faithful (step-1 loss bitwise equal) but 34.9% SLOWER per step (strided
+  chunk-view reads) — REJECTED; see profiling/minimax_h3/P6_ADALN_GATHER_CANDIDATE.md
+  on that branch.
 
 ## artifact index
 - artifacts/minimax_h3_stage2/{s1_l1_step1,s2_l4_step1,s3_l4_steps3}/ — run dirs with
