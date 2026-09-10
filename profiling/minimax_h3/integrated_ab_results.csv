@@ -1,0 +1,5 @@
+run_id,compile_blocks,final_adaln_two_row_backward,steady_state_median_sec,speedup_vs_baseline_pct,peak_allocated_bytes,peak_reserved_bytes,loss_finite,weight_changed,graph_breaks,recompiles_per_rank,oom,exit_code
+baseline,false,false,5.425830,0.0000,33835643392,37541117952,true,true,0,0,false,0
+adaln,false,true,4.963363,8.5234,33835643392,37541117952,true,true,0,0,false,0
+compile,true,false,4.755573,12.3531,29056295936,37580963840,true,true,0,1,false,0
+combined,true,true,4.217554,22.2690,29056295936,37580963840,true,true,0,1,false,0

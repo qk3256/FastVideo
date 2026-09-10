@@ -77,10 +77,10 @@ follow the same shape class but are not the target of this experiment and are
 None needed for a custom GEMM: cuBLAS through `torch.matmul` covers it. No
 Triton kernel was kept on the hot path (its numbers lost to cuBLAS).
 
-## Verdict & next step
+## Final verdict
 
-**Accepted: worth merging as opt-in training flag.** Next step (only if
-merged): extend the same 2-row specialized backward to the 24 fp32 block
-use-site gathers (combined 116 ms, if value survives a similar A/B), and only
-then reconsider a full fused RMSNorm+modulation training path. The block side
-is NOT implied by this commit's evidence.
+**KEEP as an opt-in training flag.** The final coverage audit found no second
+material low-cardinality pathology: the 24 fp32 block use-site gathers are not
+pathological per call, and their realistic full-step ceiling is below the
+project threshold. No extension to block AdaLN or fused RMSNorm/modulation is
+part of the final integrated branch.

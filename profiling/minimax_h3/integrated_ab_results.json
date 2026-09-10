@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-09-10",
+  "branch": "minimax-h3-work-sample",
+  "optimization_code_commit": "3979c853d32d62a7dab491f9d6d278b6cf0f527b",
+  "validation_clone_commit": "c3f8c36a1fcf5c723d42fefb1a6331de7a850d9d",
+  "validated_tree": "9d5b57e10e333a9d066eeb6c24d6af461aa089a3",
+  "validation_note": "The validation clone applied the two commits as patches; its tree hash exactly matched optimization_code_commit.",
+  "workload": {
+    "model": "MiniMax-H3",
+    "active_transformer_layers": 4,
+    "checkpoint_transformer_layers": 50,
+    "gpus": "2 x NVIDIA A100-SXM4-40GB",
+    "world_size": 2,
+    "sequence_parallel_size": 2,
+    "dtype": "bf16",
+    "optimizer_steps": 3,
+    "steady_state_rule": "median of optimizer steps 2 and 3"
+  },
+  "targeted_tests": {
+    "result": "18 passed",
+    "files": [
+      "fastvideo/tests/train/models/test_minimax_h3_two_row_reduce.py",
+      "fastvideo/tests/train/models/test_minimax_h3_reduced_depth.py",
+      "fastvideo/tests/train/callbacks/test_stage2_evidence.py"
+    ]
+  },
+  "runs": [
+    {
+      "run_id": "baseline",
+      "compile_blocks": false,
+      "final_adaln_two_row_backward": false,
+      "step_time_sec": [6.157059042714536, 5.332749304827303, 5.518911684863269],
+      "steady_state_median_sec": 5.425830494845286,
+      "speedup_vs_baseline_pct": 0.0,
+      "loss": [1997.527587890625, 1780.9716796875, 1594.018310546875],
+      "peak_allocated_bytes": 33835643392,
+      "peak_reserved_bytes": 37541117952,
+      "graph_breaks": 0,
+      "recompiles_per_rank": 0,
+      "exit_code": 0
+    },
+    {
+      "run_id": "adaln",
+      "compile_blocks": false,
+      "final_adaln_two_row_backward": true,
+      "step_time_sec": [5.9419820280745625, 4.863802067935467, 5.062924624886364],
+      "steady_state_median_sec": 4.963363346410915,
+      "speedup_vs_baseline_pct": 8.52343523952194,
+      "loss": [1997.527587890625, 1794.08203125, 1537.2310791015625],
+      "peak_allocated_bytes": 33835643392,
+      "peak_reserved_bytes": 37541117952,
+      "graph_breaks": 0,
+      "recompiles_per_rank": 0,
+      "exit_code": 0
+    },
+    {
+      "run_id": "compile",
+      "compile_blocks": true,
+      "final_adaln_two_row_backward": false,
+      "step_time_sec": [12.65119426138699, 4.672427051700652, 4.838719598017633],
+      "steady_state_median_sec": 4.755573324859142,
+      "speedup_vs_baseline_pct": 12.353079784245189,
+      "loss": [1997.5078125, 1782.2388916015625, 1600.81201171875],
+      "peak_allocated_bytes": 29056295936,
+      "peak_reserved_bytes": 37580963840,
+      "graph_breaks": 0,
+      "recompiles_per_rank": 1,
+      "recompile_reason": "hidden_states stride mismatch at the step-1-to-step-2 boundary",
+      "exit_code": 0
+    },
+    {
+      "run_id": "combined",
+      "compile_blocks": true,
+      "final_adaln_two_row_backward": true,
+      "step_time_sec": [11.6730727837421, 4.168690074235201, 4.266417238861322],
+      "steady_state_median_sec": 4.217553656548262,
+      "speedup_vs_baseline_pct": 22.268975034235336,
+      "loss": [1997.4849853515625, 1796.492431640625, 1534.7149658203125],
+      "peak_allocated_bytes": 29056295936,
+      "peak_reserved_bytes": 37580963840,
+      "graph_breaks": 0,
+      "recompiles_per_rank": 1,
+      "recompile_reason": "hidden_states stride mismatch at the step-1-to-step-2 boundary",
+      "exit_code": 0
+    }
+  ],
+  "all_runs": {
+    "loss_finite": true,
+    "nan_or_inf": false,
+    "weight_changed": true,
+    "backward_completed": true,
+    "optimizer_step_completed": true,
+    "oom": false,
+    "errors": false
+  },
+  "historical_steady_state_sec": {
+    "baseline": 5.484,
+    "adaln": 5.022,
+    "compile": 4.845,
+    "combined": 4.293
+  }
+}
