@@ -35,3 +35,12 @@
 ## DROP 列表
 
 QKV packed FA(无可调用训练 API)、QKNorm+partial RoPE 融合(下限远低于门)、FA tile tuning(已贴极限)、fused AdamW(数值/性能收益不到 1%)、QKV wide GEMM(0.11%)、SwiGLU 手写(compile 自融)、backend switch(无替)、选择性 AC(本轮禁)、稀疏 KV(本轮禁)、自写 FA kernel(禁)、Main GEMM 广义调优(已 falsified)。
+## 本轮(最终收尾)新增
+
+| candidate | N=4 结果 | 原因 | status |
+|---|---|---|---|
+| expandable_segments=False(allocator bubble 进攻) | step −16.8%(变差), bubble 15.05%→19.07% | VMM churn 是 heparable host 时间,cudaFree/cudaMalloc 锁的是设备本体 | **DROP** |
+| QKV-A2A overlap v2 + NCCL_MAX_CTAS=8 | region 反 +1.76ms,CTA 节流付带宽从 176.8→71.3GB/s | 竞争税主项是共享带宽,不是 SM 抢占 | **DROP** |
+| Model-Specific Specialization 挖掘 (Part A–D) | 未发现新 ≥0.7% 项 | 唯一 material 低基数 pathology 就是 Final AdaLNOut 已解决；近项 A2A 直写只 0.68% 未达门,且带 dtype 冻结 | **DROP** |
+
+结论强化:Final AdaLNOut 的 low-cardinality specialization 是整张图里**第一个、也是唯一一个**真实 material 的强项。COVERAGE_MATRIX 的「无未处理 exact candidate」在本轮三处全部复读确凿。
